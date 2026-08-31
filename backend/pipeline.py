@@ -38,20 +38,15 @@ def learned_model_loaded():
 
 def _embed(image, keypoints):
     """Embed PATCH x PATCH grayscale patches around keypoints via the ONNX
-    descriptor. Returns (N, D) L2-normalized embeddings."""
+    descriptor. Returns (N, D) L2-normalized embeddings. Patch extraction is
+    edge-padded + vectorized (no per-pixel Python loops)."""
     img = np.clip(image, 0, 255).astype(np.float32) / 255.0
-    h, w = img.shape
     half = PATCH // 2
-    patches = np.zeros((len(keypoints), 1, PATCH, PATCH), dtype=np.float32)
+    padded = np.pad(img, half, mode="edge")
+    patches = np.empty((len(keypoints), 1, PATCH, PATCH), dtype=np.float32)
     for i, kp in enumerate(keypoints):
         x, y = int(round(kp.pt[0])), int(round(kp.pt[1]))
-        x0, y0 = x - half, y - half
-        # replicate-pad at borders so every keypoint yields a full patch
-        for yy in range(PATCH):
-            sy = min(max(y0 + yy, 0), h - 1)
-            for xx in range(PATCH):
-                sx = min(max(x0 + xx, 0), w - 1)
-                patches[i, 0, yy, xx] = img[sy, sx]
+        patches[i, 0] = padded[y:y + PATCH, x:x + PATCH]
     outs = []
     for b in range(0, len(patches), 256):
         outs.append(_session.run(None, {"patch": patches[b:b + 256]})[0])
