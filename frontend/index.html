@@ -452,7 +452,7 @@ let _cacheMatch = null;
 async function runMatch() {
   const id = window.__currentScene ? window.__currentScene() : "";
   if (!id) return;
-  const errEl = $("matchError") || $("sceneError");
+  const errEl = $("sceneError");
   errEl.classList.remove("show");
   $("runBtn").disabled = true;
   $("pctVal").textContent = "…";

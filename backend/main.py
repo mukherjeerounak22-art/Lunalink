@@ -140,7 +140,7 @@ def match(crater_id: str):
                                        "match_percentage":
                                            payload.get("match_percentage")}),
                            ttl_seconds=600)
-    integrations.redis_set_json("match:%s" % crater_id, payload, ttl_seconds=300)
+    integrations.redis_set_json("match:%s" % crater_id, payload, ttl_seconds=1800)
     integrations.supabase_upsert_scene({
         "product_id": meta.get("product_id"),
         "instrument": meta.get("instrument"),

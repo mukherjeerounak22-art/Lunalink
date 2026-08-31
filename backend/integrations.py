@@ -214,9 +214,9 @@ def redis_set_json(key, payload, ttl_seconds=300):
 def _redis_set_raw(key, value, ttl_seconds):
     import httpx
     try:
-        r = httpx.get("%s/set/%s?EX=%d" % (UPSTASH_URL, key, ttl_seconds),
-                      headers={"Authorization": "Bearer %s" % UPSTASH_TOKEN},
-                      content=value, timeout=10)
+        r = httpx.post("%s/set/%s?EX=%d" % (UPSTASH_URL, key, ttl_seconds),
+                       headers={"Authorization": "Bearer %s" % UPSTASH_TOKEN},
+                       content=value, timeout=15)
         return r.status_code
     except Exception as exc:                       # noqa: BLE001
         capture_exception(exc)

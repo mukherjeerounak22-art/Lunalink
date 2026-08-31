@@ -281,13 +281,42 @@ def main():
     dem -= dem.min()
     print("SFS DEM range (m): %.2f .. %.2f" % (dem.min(), dem.max()))
 
-    # reference product: simulated second pass of the REAL image (different
-    # radiometric response + slight viewing-geometry offset). The LS re-render
-    # of the SFS relief is kept as a diagnostic overlay in the metadata.
-    ref = simulate_second_pass(I)
-    ls_diag = render_shaded(dem, sun["sun_azimuth_deg"] + 55.0, 24.0,
-                            cell_m=cell_m)
-    save_png(ls_diag, os.path.join(OUT_DIR, "ls_render_diagnostic.png"))
+    # reference product selection, in priority order:
+    # 1. a REAL reference in data/reference/lro_nac/ (LROC NAC crop or a
+    #    second Chandrayaan-2 OHRC product) - drop the file in and re-run,
+    #    zero code changes
+    # 2. simulated second pass of the real image (current stand-in)
+    lro_dir = os.path.join(ROOT, "data", "reference", "lro_nac")
+    real_ref = None
+    if os.path.isdir(lro_dir):
+        for fn in sorted(os.listdir(lro_dir)):
+            if fn.lower().endswith((".png", ".jpg", ".tif", ".tiff", ".img")):
+                real_ref = os.path.join(lro_dir, fn)
+                break
+    if real_ref:
+        print("REAL reference found:", real_ref)
+        if real_ref.lower().endswith((".img", ".tif", ".tiff")):
+            raw = np.fromfile(real_ref, dtype=np.uint16)
+            side = int(np.sqrt(len(raw)))
+            r_img = raw[: side * side].reshape(side, side).astype(np.float32)
+        else:
+            r_img = np.asarray(Image.open(real_ref).convert("L"),
+                               dtype=np.float32)
+        ref = cv2.resize(r_img, (1024, 1024), interpolation=cv2.INTER_AREA)
+        ref = simulate_second_pass(ref, rot_deg=0.0, scale=1.0, gamma=1.0,
+                                   seed=3)  # identity; keeps uint8 + noise floor
+        ref = np.clip(255.0 * (ref / 255.0) ** 1.0, 0, 255).astype(np.uint8)
+        meta["reference_source"] = "real reference product: %s" % \
+            os.path.basename(real_ref)
+    else:
+        ref = simulate_second_pass(I)
+        ls_diag = render_shaded(dem, sun["sun_azimuth_deg"] + 55.0, 24.0,
+                                cell_m=cell_m)
+        save_png(ls_diag, os.path.join(OUT_DIR, "ls_render_diagnostic.png"))
+        meta["reference_source"] = ("simulated second pass of the OHRC scene "
+                                    "(no real reference in "
+                                    "data/reference/lro_nac/ yet)")
+    save_png(ref, os.path.join(OUT_DIR, "reference.png"))
 
     save_png(I, os.path.join(OUT_DIR, "source.png"))
     save_png(ref, os.path.join(OUT_DIR, "reference.png"))
