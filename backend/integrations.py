@@ -38,31 +38,39 @@ NARRATE_RATE_LIMIT = int(os.environ.get("NARRATE_RATE_LIMIT", "20"))
 # Sentry (backend project) - breadcrumbs after each pipeline stage so a
 # silent band-order / coordinate-transform bug surfaces as an event
 # --------------------------------------------------------------------------
-_sentry = None
+_sentry_enabled = False
 
 
 def init_sentry():
-    global _sentry
+    global _sentry_enabled
     if not SENTRY_DSN_BACKEND:
         return False
     try:
         import sentry_sdk
-        _sentry = sentry_sdk.init(
-            dsn=SENTRY_DSN_BACKEND, traces_sample_rate=0.1)
+        sentry_sdk.init(dsn=SENTRY_DSN_BACKEND, traces_sample_rate=0.1)
+        _sentry_enabled = True
         return True
     except ImportError:
         return False
 
 
 def breadcrumb(message, category="pipeline", data=None):
-    if _sentry:
-        _sentry.add_breadcrumb(message=message, category=category,
-                               level="info", data=data or {})
+    if _sentry_enabled:
+        import sentry_sdk
+        sentry_sdk.add_breadcrumb(message=message, category=category,
+                                  level="info", data=data or {})
 
 
 def capture_exception(exc):
-    if _sentry:
-        _sentry.capture_exception(exc)
+    if _sentry_enabled:
+        import sentry_sdk
+        sentry_sdk.capture_exception(exc)
+
+
+def capture_message(message, level="info"):
+    if _sentry_enabled:
+        import sentry_sdk
+        sentry_sdk.capture_message(message, level=level)
 
 
 # --------------------------------------------------------------------------

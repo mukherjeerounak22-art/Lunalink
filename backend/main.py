@@ -306,5 +306,17 @@ async def analyze_upload(
     }
 
 
+@app.get("/debug/sentry-test")
+def sentry_test():
+    """Deliberate test error so you can watch it land in the Sentry
+    dashboard (Issues -> sih26166-backend)."""
+    try:
+        raise RuntimeError("SIH26166 sentry verification event - safe to ignore")
+    except RuntimeError as exc:
+        integrations.capture_exception(exc)
+        integrations.breadcrumb("sentry test event sent", "debug")
+        return {"sent": True, "note": "check Sentry Issues -> sih26166-backend"}
+
+
 app.mount("/static", StaticFiles(directory=PROC), name="static")
 app.mount("/", StaticFiles(directory=FRONTEND, html=True), name="frontend")
