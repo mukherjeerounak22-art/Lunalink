@@ -4,193 +4,181 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SIH26166 — Lunar Scene Matching &amp; 3D Terrain Hologram</title>
-<meta name="description" content="Chandrayaan-2 OHRC to reference scene registration using SIFT + RANSAC, with a live 3D holographic terrain reconstruction of the matched region.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23000'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23fff'/%3E%3C/svg%3E">
+<meta name="description" content="Chandrayaan-2 OHRC to reference scene registration using SIFT + RANSAC, with a live 3D holographic terrain reconstruction.">
 <meta property="og:title" content="SIH26166 · Lunar Scene Match">
 <meta property="og:description" content="OHRC ↔ reference registration with SIFT + RANSAC and a 3D holographic terrain view.">
 <meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23000'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23fff'/%3E%3C/svg%3E">
 <style>
+  /* ==== tokens: layered black & white ==== */
   :root {
-    --bg: #000000; --panel: rgba(255,255,255,.045); --line: rgba(255,255,255,.18);
-    --white: #ffffff; --mid: rgba(255,255,255,.6); --faint: rgba(255,255,255,.3);
-    --text: #f0f0f0; --dim: rgba(255,255,255,.48);
-    --font-h1: clamp(16px, 14px + 0.6vw, 20px);
-    --font-body: clamp(12.5px, 12px + 0.15vw, 14px);
-    --space-page: clamp(16px, 12px + 1vw, 28px);
+    --bg:#000; --layer-1:#0b0b0b; --layer-2:#131313; --layer-3:#1c1c1c;
+    --line-faint:rgba(255,255,255,.10); --line:rgba(255,255,255,.20);
+    --line-strong:rgba(255,255,255,.38);
+    --white:#fff; --text:#f2f2f2; --dim:rgba(255,255,255,.45);
+    --faint:rgba(255,255,255,.28);
+    --ok:#b8e0cc; --warn:#e6c79a; --bad:#e3a6a0;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:"Segoe UI",system-ui,sans-serif;
+    --mono:"Cascadia Code",Consolas,"Courier New",monospace;
+    --fs-hero:clamp(22px,16px + 1.4vw,34px);
+    --fs-label:10.5px; --fs-body:clamp(12.5px,12.4px + .1vw,14px);
+    --fs-small:11.5px; --fs-micro:10px;
+    --fs-metric:clamp(28px,22px + 1.2vw,42px);
+    --space-page:clamp(14px,10px + 1vw,28px);
+    --r-lg:16px; --r-md:11px; --r-sm:7px;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scrollbar-gutter: stable; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { scrollbar-gutter:stable; }
   @media (prefers-reduced-motion: reduce) {
-    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+    * { animation-duration:.001ms !important; transition-duration:.001ms !important; }
   }
-  body {
-    background:
-      radial-gradient(1200px 700px at 80% -10%, rgba(255,255,255,.05), transparent),
-      radial-gradient(900px 600px at 10% 110%, rgba(255,255,255,.03), transparent),
+  body { background:
+      radial-gradient(1100px 600px at 85% -10%, rgba(255,255,255,.055), transparent),
+      radial-gradient(800px 500px at 5% 115%, rgba(255,255,255,.028), transparent),
       var(--bg);
-    color: var(--text);
-    font-family: "Segoe UI", system-ui, sans-serif;
-    font-size: var(--font-body);
-    min-height: 100vh;
-  }
-  :focus-visible {
-    outline: 2px solid var(--white); outline-offset: 2px; border-radius: 4px;
-  }
-  header {
-    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
-    padding: 18px var(--space-page) 12px;
-    border-bottom: 1px solid var(--line);
-  }
-  header h1 { font-size: var(--font-h1); letter-spacing: 2px; color: #fff; font-weight: 600; }
-  header h1 span { color: var(--white); font-weight: 800; }
-  header .sub { color: var(--dim); font-size: 12.5px; }
-  #status { margin-left: auto; font-size: 12px; padding: 4px 12px;
-    border: 1px solid var(--line); border-radius: 999px; color: var(--dim); }
-  #status.ok { color: var(--white); border-color: rgba(255,255,255,.5); }
-  #status.bad { color: var(--dim); border-color: rgba(255,255,255,.35); border-style: dashed; }
+    color:var(--text); font-family:var(--sans); font-size:var(--fs-body); min-height:100vh; }
+  :focus-visible { outline:2px solid var(--white); outline-offset:2px; border-radius:4px; }
 
-  .layout { display: grid; grid-template-columns: 330px 1fr; gap: 16px; padding: 16px var(--space-page) var(--space-page); }
-  @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
-  .panel {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-    padding: 16px; backdrop-filter: blur(8px);
-  }
-  .panel h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
-    color: var(--dim); margin-bottom: 10px; }
-  .stack > .panel + .panel { margin-top: 16px; }
-
-  select, button {
-    width: 100%; padding: 10px 12px; border-radius: 9px; font-size: 14px;
-    background: #0d0d0d; color: var(--text); border: 1px solid var(--line);
-    outline: none;
-  }
-  button { cursor: pointer; font-weight: 600; letter-spacing: 1px;
-    background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.03));
-    border-color: rgba(255,255,255,.4); color: #fff; transition: background .15s, transform .1s; }
-  button:hover:not(:disabled) { background: rgba(255,255,255,.2); }
-  button:active:not(:disabled) { transform: scale(.98); }
-  button:disabled { opacity: .4; cursor: wait; }
-  .visually-hidden {
-    position: absolute; width: 1px; height: 1px; overflow: hidden;
-    clip: rect(0 0 0 0); white-space: nowrap;
-  }
-  .skel { position: relative; overflow: hidden; background: rgba(255,255,255,.05);
-    border-radius: 6px; color: transparent !important; }
-  .skel::after {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
-    animation: shimmer 1.3s infinite;
-  }
-  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-  .error-banner {
-    display: none; margin-top: 8px; padding: 8px 10px; border-radius: 8px;
-    font-size: 12px; line-height: 1.4; color: #000;
-    background: #f0f0f0; border: 1px solid rgba(255,255,255,.6);
-  }
-  .error-banner.show { display: block; }
-
-  .pct-wrap { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
-  .pct-ring { width: 110px; height: 110px; position: relative; flex: none; }
-  .pct-ring svg { transform: rotate(-90deg); }
-  .pct-ring .val { position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; }
-  .pct-ring .val b { font-size: 24px; color: #fff; }
-  .pct-ring .val i { font-style: normal; font-size: 9px; color: var(--dim);
-    letter-spacing: 1.5px; }
-  .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 12.5px; }
-  .kv span:nth-child(odd) { color: var(--dim); }
-  .kv span:nth-child(even) { text-align: right; color: #e8f4ff; font-variant-numeric: tabular-nums; }
-  .tag { display: inline-block; font-size: 10.5px; padding: 2px 8px; border-radius: 999px;
-    border: 1px solid var(--line); color: var(--dim); margin: 2px 3px 0 0; }
-  .tag.real { color: #a5d6c3; border-color: rgba(165,214,195,.45); }
-  .tag.synthetic { color: #e6c79a; border-color: rgba(230,199,154,.45); }
-  .note { font-size: 11px; color: var(--dim); line-height: 1.45; margin-top: 8px; }
-  button.secondary { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.3);
-    color: var(--text); font-weight: 500; }
+  header { display:flex; align-items:baseline; gap:18px; flex-wrap:wrap;
+    padding:18px var(--space-page) 14px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,.05), transparent); }
+  header h1 { font-family:var(--serif); font-size:var(--fs-hero); color:var(--white);
+    font-weight:500; letter-spacing:1px; }
+  header h1 b { font-family:var(--mono); font-weight:700; font-size:.82em;
+    letter-spacing:2px; border:1px solid var(--line-strong); border-radius:6px;
+    padding:1px 7px; margin-right:8px; vertical-align:2px; }
+  header .sub { color:var(--dim); font-size:var(--fs-small); }
+  #status { margin-left:auto; font-family:var(--mono); font-size:var(--fs-micro);
+    padding:5px 12px; border:1px solid var(--line); border-radius:999px; color:var(--dim); }
+  #status.ok { color:var(--ok); border-color:rgba(184,224,204,.4); }
+  #status.bad { color:var(--bad); border-color:rgba(227,166,160,.4); border-style:dashed; }
 </style>
-</head>
-<body>
-<header>
-  <h1>SIH<span>26166</span> · LUNAR SCENE MATCH</h1>
-  <div class="sub">Chandrayaan-2 OHRC ↔ reference registration · SIFT + RANSAC · R³F-style holographic terrain</div>
-  <div id="status" role="status" aria-live="polite">connecting…</div>
-</header>
+<style>
+  /* ==== tab bar: multi-window switch ==== */
+  nav[role="tablist"] { position:sticky; top:0; z-index:50; display:flex; gap:4px;
+    padding:10px var(--space-page); background:rgba(0,0,0,.84);
+    backdrop-filter:blur(12px); border-bottom:1px solid var(--line); }
+  nav[role="tablist"] button { width:auto; flex:0 1 auto; padding:9px 16px;
+    font-family:var(--mono); font-size:var(--fs-micro); letter-spacing:2px;
+    font-weight:600; background:transparent; border:1px solid transparent;
+    border-radius:var(--r-sm); color:var(--dim); cursor:pointer;
+    transition:color .15s, background .15s; }
+  nav[role="tablist"] button i { font-style:normal; color:var(--faint); margin-right:7px; }
+  nav[role="tablist"] button:hover { color:var(--text); background:var(--layer-1); }
+  nav[role="tablist"] button[aria-selected="true"] { color:var(--white);
+    background:var(--layer-2); border-color:var(--line-strong); }
 
-<main class="layout">
-  <div class="stack">
-    <div class="panel">
-      <h2 id="sceneLabel">Scene</h2>
-      <label for="sceneSel" class="visually-hidden">Choose a scene to match</label>
-      <select id="sceneSel" aria-labelledby="sceneLabel" disabled><option>loading…</option></select>
-      <div id="sceneTags" style="margin-top:8px"></div>
-      <button id="runBtn" style="margin-top:12px" disabled>▶ RUN MATCH</button>
-      <div id="sceneError" class="error-banner" role="alert"></div>
-    </div>
+  /* ==== views: slides ==== */
+  .view { display:none; }
+  .view.active { display:block; animation:slide-in .28s ease both; }
+  @keyframes slide-in { from { opacity:0; transform:translateX(14px); }
+                        to { opacity:1; transform:none; } }
+  .layout { display:grid; grid-template-columns:340px 1fr; gap:16px;
+    padding:18px var(--space-page) 44px; align-items:start; }
+  @media (max-width: 980px) { .layout { grid-template-columns:1fr; } }
 
-    <div class="panel">
-      <h2>Match result</h2>
-      <div class="pct-wrap">
-        <div class="pct-ring">
-          <svg width="110" height="110">
-            <circle cx="55" cy="55" r="46" fill="none" stroke="rgba(0,229,255,.12)" stroke-width="8"/>
-            <circle id="ring" cx="55" cy="55" r="46" fill="none" stroke="#00e5ff" stroke-width="8"
-                    stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"/>
-          </svg>
-          <div class="val"><b id="pctVal">–</b><i>MATCH</i></div>
-        </div>
-        <div class="kv" style="flex:1">
-          <span>inliers</span><span id="kvInliers">–</span>
-          <span>RMSE (px)</span><span id="kvRmse">–</span>
-          <span>kp source</span><span id="kvKp1">–</span>
-          <span>kp reference</span><span id="kvKp2">–</span>
-        </div>
-      </div>
-      <div id="matchError" class="error-banner" role="alert"></div>
-      <button id="narrateBtn" class="secondary" style="margin-top:10px">🔊 Narrate for judges</button>
-      <div class="note" id="narration"></div>
-    </div>
+  /* ==== panels: layered depth ==== */
+  .panel { background:var(--layer-1); border:1px solid var(--line-faint);
+    border-radius:var(--r-lg); padding:16px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(0,0,0,.55); }
+  .panel.raised { background:var(--layer-2); border-color:var(--line); }
+  .panel.inverted { background:var(--white); color:#000; border-color:var(--white);
+    box-shadow:0 12px 36px rgba(0,0,0,.7); }
+  .panel.inverted h2 { color:rgba(0,0,0,.55); }
+  .panel.inverted .kv span:nth-child(odd) { color:rgba(0,0,0,.5); }
+  .panel.inverted .kv span:nth-child(even) { color:#000; }
+  .stack > .panel + .panel { margin-top:14px; }
+  .panel h2 { font-family:var(--mono); font-size:var(--fs-label); text-transform:uppercase;
+    letter-spacing:2.5px; color:var(--dim); margin-bottom:10px; }
 
-    <div class="panel">
-      <h2>Method breakdown</h2>
-      <div class="kv">
-        <span>SIFT candidates</span><span id="mbSift">–</span>
-        <span>learned (ONNX)</span><span id="mbLearned">–</span>
-        <span>RANSAC k derived</span><span id="mbK">–</span>
-        <span>formula</span><span id="mbFormula">–</span>
-      </div>
-      <div class="note">k ≥ log(1−p) / log(1−wˢ), w and k derived from this scene's own inlier
-      history — never a hard-coded budget.</div>
-    </div>
+  /* ==== typography helpers ==== */
+  .serif-display { font-family:var(--serif); font-size:var(--fs-h1); color:var(--white);
+    font-weight:500; letter-spacing:.5px; margin-bottom:6px; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:3px 12px; font-size:var(--fs-small); }
+  .kv span:nth-child(odd) { color:var(--dim); }
+  .kv span:nth-child(even) { text-align:right; color:var(--text);
+    font-family:var(--mono); font-size:var(--fs-micro); font-variant-numeric:tabular-nums; }
+  .tag { display:inline-block; font-family:var(--mono); font-size:var(--fs-micro);
+    padding:2px 9px; border-radius:999px; border:1px solid var(--line);
+    color:var(--dim); margin:2px 3px 0 0; letter-spacing:1px; }
+  .tag.real { color:var(--ok); border-color:rgba(184,224,204,.45); }
+  .tag.synthetic { color:var(--warn); border-color:rgba(230,199,154,.45); }
+  .note { font-size:var(--fs-small); color:var(--dim); line-height:1.5; margin-top:8px; }
+</style>
+<style>
+  /* ==== controls ==== */
+  select, button, input[type="range"] { width:100%; padding:10px 12px;
+    border-radius:var(--r-sm); font-size:var(--fs-body);
+    background:var(--layer-3); color:var(--text); border:1px solid var(--line); outline:none; }
+  button { cursor:pointer; font-family:var(--mono); font-weight:600; letter-spacing:1.5px;
+    font-size:var(--fs-small); background:linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.03));
+    border-color:var(--line-strong); color:var(--white);
+    transition:background .15s, transform .1s; }
+  button:hover:not(:disabled) { background:rgba(255,255,255,.2); }
+  button:active:not(:disabled) { transform:scale(.98); }
+  button:disabled { opacity:.4; cursor:wait; }
+  button.ghost { background:transparent; border-color:var(--line); color:var(--dim); font-weight:500; }
+  input[type="range"] { padding:0; height:4px; -webkit-appearance:none; appearance:none;
+    background:var(--layer-3); border:1px solid var(--line); border-radius:999px; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none;
+    width:16px; height:16px; border-radius:50%; background:var(--white);
+    border:3px solid var(--bg); box-shadow:0 0 0 1px var(--line-strong); cursor:pointer; }
+  .range-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .range-row label { font-family:var(--mono); font-size:var(--fs-micro); color:var(--dim); width:132px; flex:none; }
+  .range-row output { font-family:var(--mono); font-size:var(--fs-micro); color:var(--text); width:46px; text-align:right; }
 
-    <div class="panel">
-      <h2>Scene metadata</h2>
-      <div class="kv" id="metaKv"></div>
-      <div class="note" id="metaNote"></div>
-    </div>
-  </div>
+  /* ==== skeleton loaders ==== */
+  .skel { position:relative; overflow:hidden; background:rgba(255,255,255,.06);
+    border-radius:6px; color:transparent !important; user-select:none; }
+  .skel::after { content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent);
+    animation:shimmer 1.3s infinite; }
+  @keyframes shimmer { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+  .skel.block { min-height:60px; }
 
-  <div class="stack">
-    <div class="panel">
-      <h2>Correspondences — source (OHRC) vs reference (re-rendered product)</h2>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
-        <div><div class="note" style="margin:0 0 4px">SOURCE</div>
-          <canvas id="cvA" width="560" height="560" style="width:100%; border-radius:8px; border:1px solid var(--line)"></canvas></div>
-        <div><div class="note" style="margin:0 0 4px">REFERENCE</div>
-          <canvas id="cvB" width="560" height="560" style="width:100%; border-radius:8px; border:1px solid var(--line)"></canvas></div>
-      </div>
-    </div>
-    <div class="panel">
-      <h2>Holographic terrain mesh — truncated-Fourier surface + marching-squares contours</h2>
-      <div id="hologram" style="height:460px; border-radius:8px; overflow:hidden;
-           border:1px solid var(--line); position:relative"></div>
-      <div class="note" id="holoMeta"></div>
-    </div>
-  </div>
-</main>
+  .error-banner { display:none; margin-top:8px; padding:8px 10px; border-radius:8px;
+    font-size:var(--fs-small); line-height:1.4; color:#000; background:var(--bad); }
+  .error-banner.show { display:block; }
+  .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden;
+    clip:rect(0 0 0 0); white-space:nowrap; }
 
+  /* ==== metric card / ring ==== */
+  .pct-wrap { display:flex; align-items:center; gap:16px; }
+  .pct-ring { width:112px; height:112px; position:relative; flex:none; }
+  .pct-ring svg { transform:rotate(-90deg); }
+  .pct-ring .val { position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; }
+  .pct-ring .val b { font-family:var(--mono); font-size:19px; color:#000; }
+  .pct-ring .val i { font-style:normal; font-family:var(--mono); font-size:9px;
+    letter-spacing:2px; color:rgba(0,0,0,.5); }
+  .metric-num { font-family:var(--mono); font-size:var(--fs-metric); font-weight:700;
+    color:var(--white); letter-spacing:-1px; }
+
+  /* ==== images / dropzone / narration / hologram ==== */
+  .img-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .img-cap { font-family:var(--mono); font-size:var(--fs-micro); letter-spacing:2px;
+    color:var(--dim); margin-bottom:5px; }
+  canvas { border-radius:var(--r-md); border:1px solid var(--line); display:block; }
+  .dropzone { border:1.5px dashed var(--line-strong); border-radius:var(--r-lg);
+    padding:34px 20px; text-align:center; color:var(--dim); transition:.15s; cursor:pointer; }
+  .dropzone:hover, .dropzone.over { background:var(--layer-2); color:var(--text); border-color:var(--white); }
+  .dropzone b { font-family:var(--serif); font-size:var(--fs-h1); font-weight:500;
+    display:block; margin-bottom:4px; color:var(--white); }
+  .narration-out { font-family:var(--serif); font-size:clamp(15px, 13px + .4vw, 18px);
+    line-height:1.75; color:var(--text); }
+  .holo-wrap { position:relative; }
+  #hologram { height:470px; border-radius:var(--r-md); overflow:hidden;
+    border:1px solid var(--line); position:relative; background:#02040a; }
+  .holo-overlay { position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; background:rgba(0,0,0,.6); color:var(--dim);
+    font-family:var(--mono); font-size:var(--fs-small); letter-spacing:2px; }
+  footer { padding:16px var(--space-page) 28px; color:var(--faint);
+    font-size:var(--fs-micro); font-family:var(--mono); letter-spacing:.5px;
+    border-top:1px solid var(--line-faint); }
+</style>
 <script src="config.js"></script>
 <script>
-// Sentry browser init - only when a DSN is configured in config.js
 if (window.SENTRY_DSN_FRONTEND) {
   var _s = document.createElement('script');
   _s.src = 'https://cdn.jsdelivr.net/npm/@sentry/browser@8/build/bundle.min.js';
@@ -206,209 +194,464 @@ if (window.SENTRY_DSN_FRONTEND) {
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
 } }
 </script>
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+</head>
+<body>
+<header>
+  <h1><b>SIH·26166</b>Lunar Scene Match</h1>
+  <div class="sub">Chandrayaan-2 OHRC ↔ reference registration · SIFT + RANSAC · holographic terrain</div>
+  <div id="status" role="status" aria-live="polite">connecting…</div>
+</header>
 
+<nav role="tablist" aria-label="Application windows">
+  <button role="tab" id="tab-match" aria-controls="view-match" aria-selected="true"><i>01</i>MATCH</button>
+  <button role="tab" id="tab-terrain" aria-controls="view-terrain" aria-selected="false"><i>02</i>TERRAIN 3D</button>
+  <button role="tab" id="tab-upload" aria-controls="view-upload" aria-selected="false"><i>03</i>UPLOAD</button>
+  <button role="tab" id="tab-narrate" aria-controls="view-narrate" aria-selected="false"><i>04</i>NARRATION</button>
+</nav>
+
+<!-- ============================ 01 · MATCH ============================ -->
+<section class="view active" id="view-match" role="tabpanel" aria-labelledby="tab-match">
+  <div class="layout">
+    <div class="stack">
+      <div class="panel">
+        <h2>Scene <em>/ crater db</em></h2>
+        <label for="sceneSel" class="visually-hidden">Choose a scene to match</label>
+        <select id="sceneSel" aria-label="Scene" disabled><option>loading…</option></select>
+        <div id="sceneTags" style="margin-top:8px"></div>
+        <button id="runBtn" style="margin-top:12px" disabled>▶ RUN MATCH</button>
+        <div id="sceneError" class="error-banner" role="alert"></div>
+      </div>
+
+      <div class="panel inverted">
+        <h2>Match result <em>/ inlier ratio</em></h2>
+        <div class="pct-wrap">
+          <div class="pct-ring">
+            <svg width="112" height="112" aria-hidden="true">
+              <circle cx="56" cy="56" r="47" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="8"/>
+              <circle id="ring" cx="56" cy="56" r="47" fill="none" stroke="#000" stroke-width="8"
+                      stroke-linecap="round" stroke-dasharray="295" stroke-dashoffset="295"/>
+            </svg>
+            <div class="val"><b id="pctVal">–</b><i>MATCH</i></div>
+          </div>
+          <div class="kv" style="flex:1">
+            <span>inliers</span><span id="kvInliers">–</span>
+            <span>RMSE px</span><span id="kvRmse">–</span>
+            <span>kp source</span><span id="kvKp1">–</span>
+            <span>kp reference</span><span id="kvKp2">–</span>
+            <span>cache layer</span><span id="kvCache">–</span>
+          </div>
+        </div>
+        <button id="narrateBtn" class="ghost" style="margin-top:12px">🔊 NARRATE FOR JUDGES</button>
+        <div id="narration" class="note"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Method breakdown</h2>
+        <div class="kv">
+          <span>SIFT candidates</span><span id="mbSift">–</span>
+          <span>learned (ONNX)</span><span id="mbLearned">–</span>
+          <span>RANSAC k derived</span><span id="mbK">–</span>
+          <span>formula</span><span id="mbFormula">–</span>
+        </div>
+        <div class="note">k ≥ log(1−p) / log(1−wˢ) — derived from this scene's own
+        inlier fraction w, never hard-coded. When RMSE stops improving, that is the
+        image's gradient-information ceiling (Cramér–Rao bound).</div>
+      </div>
+
+      <div class="panel">
+        <h2>Scene metadata</h2>
+        <div class="kv" id="metaKv"><span>…</span><span class="skel" style="min-height:12px"></span></div>
+        <div class="note" id="metaNote"></div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="panel raised">
+        <h2>Correspondences <em>/ source vs reference</em></h2>
+        <div class="img-grid">
+          <div><div class="img-cap">SOURCE · CH-2 OHRC</div>
+            <canvas id="cvA" width="560" height="560" style="width:100%" class="skel" aria-label="Source image with keypoints"></canvas></div>
+          <div><div class="img-cap">REFERENCE · SECOND PASS</div>
+            <canvas id="cvB" width="560" height="560" style="width:100%" class="skel" aria-label="Reference image with keypoints"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 02 · TERRAIN 3D ============================ -->
+<section class="view" id="view-terrain" role="tabpanel" aria-labelledby="tab-terrain">
+  <div class="layout" style="grid-template-columns:1fr">
+    <div class="panel raised">
+      <h2>Holographic terrain <em>/ truncated Fourier surface + marching-squares contours</em></h2>
+      <div class="serif-display">Drag to orbit · scroll to zoom · auto-rotating</div>
+      <div class="holo-wrap">
+        <div id="hologram"></div>
+        <div class="holo-overlay" id="holoSkel">BUILDING TERRAIN MESH…</div>
+      </div>
+      <div class="note" id="holoMeta"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 03 · UPLOAD ============================ -->
+<section class="view" id="view-upload" role="tabpanel" aria-labelledby="tab-upload">
+  <div class="layout">
+    <div class="stack">
+      <div class="panel">
+        <h2>Upload <em>/ any surface image</em></h2>
+        <div class="serif-display">From a single image to a 3D hologram</div>
+        <div id="dropzone" class="dropzone" role="button" tabindex="0"
+             aria-label="Upload an image — click or drop a file">
+          <b>Drop an image here</b>
+          or click to browse · JPG/PNG · max 25 MB<br>
+          <span class="mono-line">shape-from-shading → Fourier low-pass → holographic mesh</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" class="visually-hidden">
+      </div>
+      <div class="panel">
+        <h2>Sun geometry <em>/ assumed for reconstruction</em></h2>
+        <div class="range-row">
+          <label for="azRange">Sun azimuth</label>
+          <input type="range" id="azRange" min="0" max="360" value="315">
+          <output id="azOut">315°</output>
+        </div>
+        <div class="range-row">
+          <label for="elRange">Sun elevation</label>
+          <input type="range" id="elRange" min="5" max="80" value="30">
+          <output id="elOut">30°</output>
+        </div>
+        <div class="note">Bright slopes facing the assumed sun azimuth become ridges.
+        Tip: match the azimuth to the shadow direction in your image for best relief.</div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="panel raised">
+        <h2>Analysis result <em>/ uploaded image</em></h2>
+        <div class="img-grid">
+          <div><div class="img-cap">YOUR IMAGE</div>
+            <canvas id="upCanvas" width="560" height="560" style="width:100%"></canvas></div>
+          <div><div class="img-cap">RECONSTRUCTED RELIEF SHADING</div>
+            <canvas id="upCanvas2" width="560" height="560" style="width:100%" class="skel"></canvas></div>
+        </div>
+        <div class="kv" id="uploadKv" style="margin-top:12px"></div>
+        <button id="viewIn3dBtn" class="ghost" style="margin-top:12px" disabled>⬡ SEND TO TERRAIN 3D →</button>
+        <div class="note" id="uploadNote">Relief from a single image is a photometric
+        approximation (non-metric), reconstructed with the same pipeline as the OHRC scene.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 04 · NARRATION ============================ -->
+<section class="view" id="view-narrate" role="tabpanel" aria-labelledby="tab-narrate">
+  <div class="layout" style="grid-template-columns:1fr">
+    <div class="panel raised">
+      <h2>Judge narration <em>/ Gemini · narrates metrics, never generates them</em></h2>
+      <div class="narration-out skel block" id="narrateOut">Narration appears here after you run a match.</div>
+      <div class="mono-line" id="narrateMeta" style="margin-top:14px"></div>
+      <button id="narrateBtn2" class="ghost" style="margin-top:14px; width:auto; padding:9px 18px">🔊 NARRATE CURRENT SCENE</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  SIH26166 · synthetic Tycho numbers are never mixed with real-scene numbers ·
+  relief is a photometric approximation (non-metric) · data-source-agnostic pipeline
+</footer>
+<script type="module">
 const $ = id => document.getElementById(id);
 const API = window.API_BASE || "";
-const statusEl = $('status');
 
+/* ---- tab switching (multi-window slides) ---- */
+const TABS = ["match", "terrain", "upload", "narrate"];
+function showTab(name) {
+  TABS.forEach(t => {
+    const on = t === name;
+    $("tab-" + t).setAttribute("aria-selected", on);
+    $("view-" + t).classList.toggle("active", on);
+  });
+  if (name === "terrain") window.dispatchEvent(new Event("resize"));
+}
+TABS.forEach(t => $("tab-" + t).addEventListener("click", () => showTab(t)));
+window.__showTab = showTab;
+
+/* ---- health ---- */
 async function checkHealth() {
+  const el = $("status");
   try {
-    const r = await fetch(API + '/health');
-    const j = await r.json();
-    statusEl.textContent = 'backend online · ' + j.pipeline;
-    statusEl.className = 'ok';
+    const j = await (await fetch(API + "/health")).json();
+    el.textContent = "backend online · " + j.pipeline;
+    el.className = "ok";
     return true;
   } catch (e) {
-    statusEl.textContent = 'backend offline — start it with: uvicorn main:app --port 8000';
-    statusEl.className = 'bad';
-    $('sceneSel').innerHTML = '<option>backend offline</option>';
+    el.textContent = "backend offline — uvicorn main:app --port 8000";
+    el.className = "bad";
     return false;
   }
 }
 
+/* ---- scenes ---- */
 let scenes = [];
 async function loadScenes() {
-  const sel = $('sceneSel');
-  const errEl = $('sceneError');
-  errEl.classList.remove('show');
+  const sel = $("sceneSel"), errEl = $("sceneError");
   try {
-    const res = await fetch(API + '/craters');
-    if (!res.ok) throw new Error('server responded ' + res.status);
+    const res = await fetch(API + "/craters");
+    if (!res.ok) throw new Error(res.status);
     scenes = await res.json();
   } catch (e) {
-    errEl.textContent = 'Couldn\'t load scenes — check the backend is running, then retry.';
-    errEl.classList.add('show');
-    sel.innerHTML = '<option>no scenes available</option>';
+    errEl.textContent = "Couldn't load scenes — check the backend, then retry.";
+    errEl.classList.add("show");
     return;
   }
-  sel.innerHTML = '';
-  if (!scenes.length) {
-    errEl.textContent = 'No scenes are configured yet.';
-    errEl.classList.add('show');
-    sel.innerHTML = '<option>no scenes available</option>';
-    return;
-  }
+  sel.innerHTML = "";
   scenes.forEach(s => {
-    const o = document.createElement('option');
-    o.value = s.id; o.textContent = s.name + ' — ' + (s.subtitle || '');
+    const o = document.createElement("option");
+    o.value = s.id; o.textContent = s.name + " — " + (s.subtitle || "");
     sel.appendChild(o);
   });
-  sel.disabled = false;
-  $('runBtn').disabled = false;
+  sel.disabled = false; $("runBtn").disabled = false;
   renderSceneMeta();
 }
+window.__currentScene = () => $("sceneSel").value;
 
-function kv(entries) {
-  return entries.map(([k, v]) => `<span>${k}</span><span>${v ?? '–'}</span>`).join('');
+function kvHtml(entries) {
+  return entries.map(([k, v]) => `<span>${k}</span><span>${v ?? "–"}</span>`).join("");
 }
-
 function renderSceneMeta() {
-  const s = scenes.find(x => x.id === $('sceneSel').value);
-  if (!s || !s.metadata) { $('metaKv').innerHTML = ''; return; }
-  const m = s.metadata;
-  $('sceneTags').innerHTML =
-    `<span class="tag ${s.kind}">${s.kind === 'real' ? 'REAL ISRO DATA' : 'SYNTHETIC STAND-IN'}</span>` +
-    `<span class="tag">${m.instrument || ''}</span>`;
-  const sun = m.sun || {};
-  $('metaKv').innerHTML = kv([
-    ['product', m.product_id],
-    ['acquired', (m.start_time_utc || '').replace('T', ' ').replace('Z', '')],
-    ['band', m.band],
-    ['footprint', m.footprint_corners ?
+  const s = scenes.find(x => x.id === $("sceneSel").value);
+  const kvEl = $("metaKv");
+  if (!s || !s.metadata) { kvEl.innerHTML = ""; return; }
+  const m = s.metadata, sun = m.sun || {};
+  $("sceneTags").innerHTML =
+    `<span class="tag ${s.kind}">${s.kind === "real" ? "REAL ISRO DATA" : "SYNTHETIC STAND-IN"}</span>` +
+    `<span class="tag">${m.instrument || ""}</span>`;
+  kvEl.innerHTML = kvHtml([
+    ["product", m.product_id],
+    ["acquired", (m.start_time_utc || "").replace("T", " ").replace("Z", "")],
+    ["band", m.band],
+    ["footprint", m.footprint_corners ?
       `${m.footprint_corners.upper_left.lat_deg.toFixed(3)}°, ${m.footprint_corners.upper_left.lon_deg.toFixed(3)}°` :
-      (m.target || '–')],
-    ['GSD', m.pixel_resolution_m ? m.pixel_resolution_m.toFixed(3) + ' m/px' : '–'],
-    ['alt (km)', m.spacecraft_altitude_km ? m.spacecraft_altitude_km.toFixed(1) : '–'],
-    ['sun elev / az', `${(sun.sun_elevation_deg ?? 0).toFixed(1)}° / ${(sun.sun_azimuth_deg ?? 0).toFixed(1)}°`],
-    ['incidence', sun.solar_incidence_deg != null ? sun.solar_incidence_deg.toFixed(1) + '°' : '–'],
-    ['DEM range', m.dem_range_m ? `${m.dem_range_m[0].toFixed(1)}–${m.dem_range_m[1].toFixed(1)} m` : '–'],
+      (m.target || "–")],
+    ["GSD", m.pixel_resolution_m ? m.pixel_resolution_m.toFixed(3) + " m/px" : "–"],
+    ["sun elev / az", `${(sun.sun_elevation_deg ?? 0).toFixed(1)}° / ${(sun.sun_azimuth_deg ?? 0).toFixed(1)}°`],
+    ["incidence", sun.solar_incidence_deg != null ? sun.solar_incidence_deg.toFixed(1) + "°" : "–"],
+    ["DEM range", m.dem_range_m ? `${m.dem_range_m[0].toFixed(1)}–${m.dem_range_m[1].toFixed(1)} m` : "–"],
   ]);
-  $('metaNote').textContent = m.provenance || '';
+  $("metaNote").textContent = m.provenance || "";
 }
+$("sceneSel").addEventListener("change", () => { _cacheMatch = null; renderSceneMeta(); runMatch(); });
+</script>
+<script type="module">
+const $ = id => document.getElementById(id);
+const API = window.API_BASE || "";
 
-$('sceneSel').addEventListener('change', () => {
-  _cacheMatch = null;
-  renderSceneMeta();
-  runMatch();
-});
-
+/* ---- match pipeline ---- */
 let _cacheMatch = null;
 async function runMatch() {
-  const id = $('sceneSel').value;
+  const id = window.__currentScene ? window.__currentScene() : "";
   if (!id) return;
-  const errEl = $('matchError');
-  errEl.classList.remove('show');
-  $('runBtn').disabled = true;
-  $('pctVal').textContent = '…';
+  const errEl = $("matchError") || $("sceneError");
+  errEl.classList.remove("show");
+  $("runBtn").disabled = true;
+  $("pctVal").textContent = "…";
+  ["kvInliers","kvRmse","kvKp1","kvKp2","kvCache","mbSift","mbLearned","mbK","mbFormula"]
+    .forEach(k => { const el = $(k); if (el && !el.classList.contains("skel")) el.classList.add("skel"); });
+  $("cvA").classList.add("skel"); $("cvB").classList.add("skel");
   try {
     if (!_cacheMatch) {
-      const res = await fetch(API + '/match/' + id);
-      if (!res.ok) throw new Error('server responded ' + res.status);
+      const res = await fetch(API + "/match/" + id);
+      if (!res.ok) throw new Error(res.status);
       _cacheMatch = await res.json();
     }
     renderMatch(_cacheMatch);
     if (window.__loadTerrain) await window.__loadTerrain(id);
   } catch (e) {
-    errEl.textContent = 'Match failed to run — check the backend and try again.';
-    errEl.classList.add('show');
-    $('pctVal').textContent = '–';
-  } finally { $('runBtn').disabled = false; }
+    errEl.textContent = "Match failed — check the backend and try again.";
+    errEl.classList.add("show");
+    $("pctVal").textContent = "–";
+  } finally { $("runBtn").disabled = false; }
 }
-$('runBtn').addEventListener('click', runMatch);
-
-async function narrate() {
-  const id = $('sceneSel').value;
-  if (!id) return;
-  const btn = $('narrateBtn'), out = $('narration');
-  btn.disabled = true; btn.textContent = '… narrating';
-  try {
-    const r = await fetch(API + '/narrate/' + id);
-    if (r.status === 429) {
-      out.textContent = 'Rate limited (over ' + '20/min) — the Upstash limiter working as designed.';
-      return;
-    }
-    const j = await r.json();
-    out.textContent = (j.source === 'gemini' ? '[Gemini] ' : '[local template] ') + j.narration;
-  } catch (e) {
-    out.textContent = 'Narration unavailable — backend unreachable.';
-  } finally { btn.disabled = false; btn.textContent = '🔊 Narrate for judges'; }
-}
-$('narrateBtn').addEventListener('click', narrate);
 
 function renderMatch(m) {
   const pct = m.match_percentage ?? 0;
-  $('pctVal').textContent = pct.toFixed(1) + '%';
-  $('ring').style.strokeDashoffset = 289 * (1 - pct / 100);
-  $('ring').style.stroke = pct > 40 ? '#69f0ae' : pct > 15 ? '#ffb74d' : '#ff5252';
-  $('kvInliers').textContent = `${m.inlier_count ?? 0} / ${m.matches.length}`;
-  $('kvRmse').textContent = m.rmse_px != null ? m.rmse_px.toFixed(2) : '–';
-  $('kvKp1').textContent = m.n_keypoints_source;
-  $('kvKp2').textContent = m.n_keypoints_ref;
-  $('mbSift').textContent = m.method_breakdown.sift_candidates;
-  $('mbLearned').textContent = m.method_breakdown.learned_model_loaded ?
-    `loaded (${m.method_breakdown.learned_candidates})` : 'not trained — SIFT fallback';
-  $('mbK').textContent = m.ransac ? m.ransac.derived_iterations_k : '–';
-  $('mbFormula').textContent = m.ransac ? m.ransac.formula : '–';
+  $("pctVal").textContent = pct.toFixed(1) + "%";
+  $("ring").style.strokeDashoffset = 295 * (1 - pct / 100);
+  ["kvInliers","kvRmse","kvKp1","kvKp2","kvCache","mbSift","mbLearned","mbK","mbFormula"]
+    .forEach(k => $(k).classList.remove("skel"));
+  $("kvInliers").textContent = `${m.inlier_count ?? 0} / ${m.matches.length}`;
+  $("kvRmse").textContent = m.rmse_px != null ? m.rmse_px.toFixed(2) : "–";
+  $("kvKp1").textContent = m.n_keypoints_source;
+  $("kvKp2").textContent = m.n_keypoints_ref;
+  $("kvCache").textContent = (m.cache || "fresh").toUpperCase();
+  const mb = m.method_breakdown;
+  $("mbSift").textContent = mb.sift_candidates;
+  $("mbLearned").textContent = mb.learned_model_loaded ?
+    `loaded (${mb.learned_candidates})` : "not trained — SIFT fallback";
+  $("mbK").textContent = m.ransac ? m.ransac.derived_iterations_k : "–";
+  $("mbFormula").textContent = m.ransac ? m.ransac.formula : "–";
   drawOverlays(m);
 }
 
-const imgCache = {};
-function loadImg(src) {
-  if (!imgCache[src]) imgCache[src] = new Promise((res, rej) => {
-    const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src;
-  });
-  return imgCache[src];
-}
-
 async function drawOverlays(m) {
-  const [imA, imB] = await Promise.all([
-    loadImg(m.source_image), loadImg(m.reference_image)]);
-  const draws = [[ $('cvA'), imA, 'src'], [ $('cvB'), imB, 'ref']];
-  for (const [cv, im, key] of draws) {
-    const ctx = cv.getContext('2d');
-    ctx.drawImage(im, 0, 0, cv.width, cv.height);
+  const load = src => new Promise((res, rej) => {
+    const im = new Image(); im.onload = () => res(im); im.onerror = rej;
+    im.src = (window.API_BASE || "") + src;
+  });
+  const [imA, imB] = await Promise.all([load(m.source_image), load(m.reference_image)]);
+  for (const [cv, im] of [[$("cvA"), imA], [$("cvB"), imB]]) {
+    cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+    cv.classList.remove("skel");
   }
-  // keypoint dots
-  const s = $('cvA').width / 1024;
-  const ctxA = $('cvA').getContext('2d'), ctxB = $('cvB').getContext('2d');
+  const s = $("cvA").width / 1024;
+  const ctxA = $("cvA").getContext("2d"), ctxB = $("cvB").getContext("2d");
   m.matches.forEach(mt => {
-    const c = mt.inlier ? 'rgba(105,240,174,.95)' : 'rgba(255,82,82,.55)';
+    const c = mt.inlier ? "rgba(184,224,204,.95)" : "rgba(227,166,160,.55)";
     ctxA.fillStyle = c; ctxB.fillStyle = c;
     ctxA.beginPath(); ctxA.arc(mt.src[0] * s, mt.src[1] * s, mt.inlier ? 2.2 : 1.4, 0, 7); ctxA.fill();
     ctxB.beginPath(); ctxB.arc(mt.ref[0] * s, mt.ref[1] * s, mt.inlier ? 2.2 : 1.4, 0, 7); ctxB.fill();
   });
 }
+
+/* ---- narration (both buttons) ---- */
+async function narrate() {
+  const id = window.__currentScene ? window.__currentScene() : "";
+  if (!id) return;
+  const out = $("narrateOut");
+  out.classList.add("skel", "block");
+  try {
+    const r = await fetch(API + "/narrate/" + id);
+    if (r.status === 429) {
+      out.textContent = "Rate limited — the sliding-window limiter is working as designed.";
+      return;
+    }
+    const j = await r.json();
+    out.textContent = (j.source === "gemini" ? "[Gemini] " : "[local template] ") + j.narration;
+    $("narrateMeta").textContent = j.metrics_summary;
+  } catch (e) {
+    out.textContent = "Narration unavailable — backend unreachable.";
+  } finally { out.classList.remove("skel", "block"); }
+}
+$("narrateBtn").addEventListener("click", narrate);
+$("narrateBtn2").addEventListener("click", narrate);
+$("runBtn").addEventListener("click", runMatch);
+window.__runMatch = runMatch;
 window.__checkHealth = checkHealth;
 window.__loadScenes = loadScenes;
-window.__runMatch = runMatch;
+</script>
+<script type="module">
+const $ = id => document.getElementById(id);
+const API = window.API_BASE || "";
+
+/* ---- upload -> analyze -> hologram ---- */
+const dz = $("dropzone"), fi = $("fileInput");
+let lastFile = null, lastPayload = null;
+
+dz.addEventListener("click", () => fi.click());
+dz.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") fi.click(); });
+dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("over"); });
+dz.addEventListener("dragleave", () => dz.classList.remove("over"));
+dz.addEventListener("drop", e => {
+  e.preventDefault(); dz.classList.remove("over");
+  if (e.dataTransfer.files[0]) analyze(e.dataTransfer.files[0]);
+});
+fi.addEventListener("change", () => { if (fi.files[0]) analyze(fi.files[0]); });
+$("azRange").addEventListener("input", () => $("azOut").value = $("azRange").value + "°");
+$("elRange").addEventListener("input", () => $("elOut").value = $("elRange").value + "°");
+
+async function analyze(file) {
+  lastFile = file;
+  const preview = new Image();
+  preview.onload = () => {
+    const ctx = $("upCanvas").getContext("2d");
+    ctx.drawImage(preview, 0, 0, $("upCanvas").width, $("upCanvas").height);
+    $("upCanvas").classList.remove("skel");
+  };
+  preview.src = URL.createObjectURL(file);
+  $("upCanvas").classList.remove("skel");
+  $("upCanvas").getContext("2d").drawImage(preview, 0, 0);
+
+  $("upCanvas2").classList.add("skel");
+  $("uploadKv").innerHTML = "<span>analyzing</span><span class='skel' style='min-height:12px'></span>";
+  $("viewIn3dBtn").disabled = true;
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("sun_az", $("azRange").value);
+  fd.append("sun_el", $("elRange").value);
+  try {
+    const r = await fetch(API + "/analyze_upload", { method: "POST", body: fd });
+    if (!r.ok) throw new Error(await r.text());
+    const payload = await r.json();
+    lastPayload = payload;
+    renderHillshade(payload);
+    const g = payload.grid;
+    $("uploadKv").innerHTML =
+      `<span>relief range</span><span>${g.zmin_m.toFixed(1)} – ${g.zmax_m.toFixed(1)} m</span>` +
+      `<span>grid</span><span>${g.n}×${g.n}</span>` +
+      `<span>sun (az / el)</span><span>${$("azRange").value}° / ${$("elRange").value}°</span>` +
+      `<span>contour levels</span><span>${payload.contours.levels_m.length}</span>`;
+    $("viewIn3dBtn").disabled = false;
+  } catch (e) {
+    $("uploadKv").innerHTML = `<span>error</span><span>${String(e).slice(0, 80)}</span>`;
+    $("upCanvas2").classList.remove("skel");
+  }
+}
+
+function renderHillshade(payload) {
+  const { grid: G } = payload, n = G.n, H = G.heights_m;
+  const az = (Math.PI / 180) * +$("azRange").value;
+  const el = (Math.PI / 180) * +$("elRange").value;
+  const sx = Math.cos(el) * Math.sin(az), sy = -Math.cos(el) * Math.cos(az),
+        sz = Math.sin(el);
+  const cv = $("upCanvas2"), ctx = cv.getContext("2d");
+  const im = ctx.createImageData(cv.width, cv.height);
+  const hAt = (x, y) => H[Math.min(Math.max(y, 0), n - 1)][Math.min(Math.max(x, 0), n - 1)];
+  for (let py = 0; py < cv.height; py++) {
+    for (let px = 0; px < cv.width; px++) {
+      const gx = (px / cv.width) * (n - 1), gy = (py / cv.height) * (n - 1);
+      const x0 = Math.floor(gx), y0 = Math.floor(gy);
+      const ddx = (hAt(x0 + 1, y0) - hAt(x0, y0)), ddy = (hAt(x0, y0 + 1) - hAt(x0, y0));
+      const nl = Math.sqrt(ddx * ddx + ddy * ddy + 1);
+      const lam = Math.max(0, (-ddx * sx - ddy * sy + sz) / nl);
+      const v = Math.round(40 + 215 * lam);
+      const i = (py * cv.width + px) * 4;
+      im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(im, 0, 0);
+  cv.classList.remove("skel");
+}
+
+$("viewIn3dBtn").addEventListener("click", () => {
+  if (!lastPayload) return;
+  window.__buildTerrain(lastPayload);
+  window.__showTab("terrain");
+});
 </script>
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// ---- holographic terrain -------------------------------------------------
 const host = document.getElementById('hologram');
+const overlay = document.getElementById('holoSkel');
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 host.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x05070d, 0.0016);
+scene.fog = new THREE.FogExp2(0x000000, 0.0018);
 const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 5000);
 camera.position.set(0, 260, 420);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.autoRotate = true;
 controls.autoRotateSpeed = 0.8; controls.maxPolarAngle = Math.PI * 0.49;
 
-scene.add(new THREE.AmbientLight(0x334455, 0.8));
-const key = new THREE.DirectionalLight(0x9fdcff, 1.4);
+scene.add(new THREE.AmbientLight(0x555555, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
 key.position.set(-300, 400, 200); scene.add(key);
 
-// starfield
-{
+{ /* starfield */
   const g = new THREE.BufferGeometry();
   const n = 1500, pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
@@ -420,12 +663,11 @@ key.position.set(-300, 400, 200); scene.add(key);
   }
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   scene.add(new THREE.Points(g, new THREE.PointsMaterial({
-    color: 0x8fb8d8, size: 1.6, sizeAttenuation: false, transparent: true, opacity: .7 })));
+    color: 0xcfcfcf, size: 1.5, sizeAttenuation: false,
+    transparent: true, opacity: .6 })));
 }
-
-// ground glow grid
-const grid = new THREE.GridHelper(1400, 28, 0x00e5ff, 0x003844);
-grid.material.transparent = true; grid.material.opacity = 0.12;
+const grid = new THREE.GridHelper(1400, 28, 0x888888, 0x222222);
+grid.material.transparent = true; grid.material.opacity = 0.14;
 grid.position.y = -2; scene.add(grid);
 
 let terrainGroup = null;
@@ -433,12 +675,13 @@ const SIZE = 1000;
 
 function buildTerrain(payload) {
   if (terrainGroup) { scene.remove(terrainGroup); terrainGroup = null; }
+  overlay.style.display = 'none';
   const { grid: G, contours } = payload;
   const n = G.n, H = G.heights_m;
   const zSpan = Math.max(G.zmax_m - G.zmin_m, 1e-6);
-  const horiz = SIZE / G.extent_m;               // scene units per meter
-  let vScale = Math.max(3 * horiz, 260 / zSpan); // >=3x vertical exaggeration
-  if (zSpan * vScale > 420) vScale = 420 / zSpan; // but cap absolute relief
+  const horiz = SIZE / G.extent_m;
+  let vScale = Math.max(3 * horiz, 260 / zSpan);
+  if (zSpan * vScale > 420) vScale = 420 / zSpan;
   const zOff = -G.zmin_m;
 
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, n - 1, n - 1);
@@ -450,18 +693,13 @@ function buildTerrain(payload) {
   geo.computeVertexNormals();
 
   const group = new THREE.Group();
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x0b2b33, metalness: 0.55, roughness: 0.35,
-    emissive: 0x06222b, transparent: true, opacity: 0.92,
-    side: THREE.DoubleSide });
-  group.add(new THREE.Mesh(geo, mat));
+  group.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    color: 0x151515, metalness: 0.5, roughness: 0.42,
+    emissive: 0x0a0a0a, transparent: true, opacity: 0.95,
+    side: THREE.DoubleSide })));
+  group.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    color: 0xffffff, wireframe: true, transparent: true, opacity: 0.10 })));
 
-  const wire = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
-    color: 0x00e5ff, wireframe: true, transparent: true, opacity: 0.16 }));
-  group.add(wire);
-
-  // marching-squares contour lines (sub-pixel interpolated by the backend),
-  // draped onto the surface via bilinear height interpolation
   const hAt = (x, y) => {
     const fx = Math.min(Math.max(x, 0), n - 1.001), fy = Math.min(Math.max(y, 0), n - 1.001);
     const i = Math.floor(fy), j = Math.floor(fx), dy = fy - i, dx = fx - j;
@@ -472,48 +710,41 @@ function buildTerrain(payload) {
     (x / (n - 1) - 0.5) * SIZE, (hAt(x, y) + zOff) * vScale + 1.2,
     (y / (n - 1) - 0.5) * SIZE];
   contours.segments.forEach((segs, li) => {
-    const alpha = 0.25 + 0.5 * (li / contours.levels_m.length);
+    const alpha = 0.3 + 0.55 * (li / contours.levels_m.length);
     const arr = [];
-    segs.forEach(([x1, y1, x2, y2]) => {
-      arr.push(...cvt(x1, y1), ...cvt(x2, y2));
-    });
+    segs.forEach(([x1, y1, x2, y2]) => arr.push(...cvt(x1, y1), ...cvt(x2, y2)));
     const gg = new THREE.BufferGeometry();
     gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
     group.add(new THREE.LineSegments(gg, new THREE.LineBasicMaterial({
-      color: 0x69f0ae, transparent: true, opacity: alpha })));
+      color: 0xffffff, transparent: true, opacity: alpha })));
   });
 
   terrainGroup = group; scene.add(group);
-  const exag = (vScale / horiz).toFixed(1);
   document.getElementById('holoMeta').textContent =
-    `${n}×${n} height grid · cell ≈ ${G.cell_meters.toFixed(1)} m · extent ≈ ` +
+    `${n}×${n} grid · cell ≈ ${G.cell_meters.toFixed(1)} m · extent ≈ ` +
     `${(G.extent_m/1000).toFixed(2)} km · relief ${G.zmin_m.toFixed(1)}–${G.zmax_m.toFixed(1)} m ` +
-    `· vertical exaggeration ×${exag} · ${contours.levels_m.length} contour levels, ` +
-    `marching-squares sub-pixel placement`;
+    `· vertical exaggeration ×${(vScale / horiz).toFixed(1)} · ` +
+    `${contours.levels_m.length} marching-squares contour levels · source: ${payload.scene_id}`;
 }
 
 async function loadTerrain(id) {
+  overlay.style.display = 'flex';
   const payload = await (await fetch((window.API_BASE || "") + '/terrain/' + id)).json();
   buildTerrain(payload);
 }
 
 function resize() {
   const w = host.clientWidth, h = host.clientHeight;
-  renderer.setSize(w, h);
-  camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
 }
-new ResizeObserver(resize).observe(host);
-resize();
-
+new ResizeObserver(resize).observe(host); resize();
 (function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
+  requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera);
 })();
 window.__loadTerrain = loadTerrain;
+window.__buildTerrain = buildTerrain;
 </script>
-<script type="module">
-// ---- boot ---------------------------------------------------------------
+<script>
 (async () => {
   const ok = await window.__checkHealth();
   if (!ok) return;
@@ -521,8 +752,6 @@ window.__loadTerrain = loadTerrain;
   window.__runMatch();
 })();
 </script>
-
-
-
-
+</body>
+</html>
 </html>

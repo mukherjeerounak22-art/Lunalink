@@ -13,7 +13,7 @@ import time
 
 import numpy as np
 import cv2
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -250,6 +250,60 @@ def narrate(crater_id: str):
     # /match (cache-aside). Here we only narrate.
     return {"narration": text, "source": source, "rate_used": n,
             "metrics_summary": summary}
+
+
+@app.post("/analyze_upload")
+async def analyze_upload(
+    file: UploadFile = File(...),
+    sun_az: float = Form(315.0),
+    sun_el: float = Form(30.0),
+):
+    """Upload any lunar/surface image -> shape-from-shading relief -> the
+    same terrain payload the 3D hologram consumes (grid + marching-squares
+    contours). Non-metric, slope-calibrated relief - same honesty framing
+    as the OHRC scene."""
+    import io
+    from PIL import Image as PILImage
+    from preprocess import shape_from_shading
+
+    data = await file.read()
+    if len(data) > 25 * 1024 * 1024:
+        raise HTTPException(413, "file too large (25 MB max)")
+    try:
+        img = PILImage.open(io.BytesIO(data)).convert("L")
+    except Exception:
+        raise HTTPException(400, "could not decode image")
+    img = np.asarray(img.resize((512, 512), PILImage.LANCZOS),
+                     dtype=np.float32)
+
+    dem = shape_from_shading(img, sun_az, sun_el, cell_m=1.0)
+    smooth = pipeline.fourier_smooth(dem, keep_fraction=0.18)
+    g = cv2.resize(smooth, (GRID_N, GRID_N),
+                   interpolation=cv2.INTER_AREA).astype(float)
+    g -= g.min()
+    zmin, zmax = float(g.min()), float(g.max())
+    levels = [zmin + (zmax - zmin) * (i + 1) / (CONTOUR_LEVELS + 1)
+              for i in range(CONTOUR_LEVELS)]
+    contours = {"levels_m": levels,
+                "segments": [pipeline.marching_squares(g, lv)
+                             for lv in levels]}
+    return {
+        "scene_id": "upload:%s" % (file.filename or "image"),
+        "grid": {"n": GRID_N, "cell_meters": 1.0,
+                 "extent_m": float(GRID_N),
+                 "heights_m": [[round(float(v), 3) for v in row] for row in g],
+                 "zmin_m": zmin, "zmax_m": zmax},
+        "contours": contours,
+        "metadata": {
+            "product_id": "user-upload",
+            "instrument": "Uploaded image (shape-from-shading)",
+            "sun": {"sun_azimuth_deg": sun_az, "sun_elevation_deg": sun_el},
+            "provenance": "User-uploaded image; relief reconstructed by "
+                          "linearized-Lambertian shape-from-shading - "
+                          "photometric approximation, NOT a metric DEM.",
+        },
+        "cache": "fresh",
+    }
 
 
 app.mount("/static", StaticFiles(directory=PROC), name="static")

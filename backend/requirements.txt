@@ -4,4 +4,8 @@ numpy
 opencv-python
 scipy
 pillow
-onnxruntime  # optional - enables the learned descriptor branch
+python-multipart
+httpx
+sentry-sdk        # enabled when SENTRY_DSN_BACKEND is set
+onnxruntime       # optional - enables the learned descriptor branch
+psycopg2-binary   # optional - only for migrate.py
