@@ -131,6 +131,10 @@ def match(crater_id: str):
         "Cramer-Rao bound (Var >= sigma^2 / sum (dI/dx)^2) - a sharper rim "
         "gives a tighter bound; flat regolith makes lower RMSE impossible.")
     payload["cache"] = "fresh"
+    craters_path = os.path.join(d, "craters.json")
+    if os.path.exists(craters_path):
+        with open(craters_path) as f:
+            payload["craters"] = json.load(f)
     _cache["match"][crater_id] = payload
 
     # persistence: jobs -> matches -> metrics (scenes upserted separately)

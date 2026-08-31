@@ -299,6 +299,12 @@ if (window.SENTRY_DSN_FRONTEND) {
             <canvas id="cvB" width="560" height="560" style="width:100%" class="skel" aria-label="Reference image with keypoints"></canvas></div>
         </div>
       </div>
+      <div class="panel">
+        <h2>Crater identification <em>/ Hough + shadow projection</em></h2>
+        <div class="note" id="craterNote">Depth ≈ shadow length × tan(sun elevation);
+        positions mapped to selenographic coordinates via the mission geometry file.</div>
+        <div class="mono-line skel block" id="craterTable" style="margin-top:6px"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -541,6 +547,23 @@ async function drawOverlays(m) {
     ctxA.beginPath(); ctxA.arc(mt.src[0] * s, mt.src[1] * s, mt.inlier ? 2.2 : 1.4, 0, 7); ctxA.fill();
     ctxB.beginPath(); ctxB.arc(mt.ref[0] * s, mt.ref[1] * s, mt.inlier ? 2.2 : 1.4, 0, 7); ctxB.fill();
   });
+  // crater overlays + table (real detections from the OHRC grid)
+  if (m.craters && m.craters.length) {
+    ctxA.strokeStyle = "rgba(230,199,154,.9)"; ctxA.lineWidth = 1.5;
+    m.craters.forEach(c => {
+      ctxA.beginPath();
+      ctxA.arc(c.x_px * s, c.y_px * s, c.radius_px * s, 0, 7);
+      ctxA.stroke();
+    });
+    $("craterTable").classList.remove("skel", "block");
+    $("craterTable").textContent = m.craters.slice(0, 10).map(c =>
+      `r=${c.radius_m}m @ (${c.lat_deg ?? "?"}°, ${c.lon_deg ?? "?"}°)` +
+      ` · shadow ${c.shadow_len_m}m · depth ≈ ${c.depth_est_m}m`
+    ).join("\n");
+  } else {
+    $("craterTable").classList.remove("skel", "block");
+    $("craterTable").textContent = "No craters with measurable shadows in this crop.";
+  }
 }
 
 /* ---- narration (both buttons) ---- */

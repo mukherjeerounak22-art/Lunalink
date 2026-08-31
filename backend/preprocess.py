@@ -258,6 +258,112 @@ def pick_best_crop(mm, lines, samples, n_cands=5, crop=4096, stride=16):
     return best_origin, best_var
 
 
+# ---- crater identification + shadow projection ---------------------------
+def _load_geo_grid():
+    """Geometry CSV -> (lon, lat, pixel, scan) arrays for selenographic
+    lookup of any full-image (line, sample)."""
+    csv = os.path.join(SCENE_DIR, "geometry", "calibrated", "20210401",
+                       "ch2_ohr_ncp_20210401T2357376656_g_grd_d18.csv")
+    if not os.path.exists(csv):
+        return None
+    try:
+        d = np.genfromtxt(csv, delimiter=",", skip_header=1)
+        return d  # cols: Longitude, Latitude, Pixel, Scan
+    except Exception:
+        return None
+
+
+def _geo_lookup(geo, line, sample):
+    """Bilinear interpolation of the per-100-px geometry grid."""
+    if geo is None:
+        return None, None
+    lon_c, lat_c, px_c, sc_c = geo[:, 0], geo[:, 1], geo[:, 2], geo[:, 3]
+    s0 = int(round(line / 100.0)) * 100
+    p0 = int(round(sample / 100.0)) * 100
+    best, bd = None, 1e18
+    for ds in (0, 100):
+        for dp in (0, 100, -100):
+            m = (np.abs(sc_c - (s0 + ds)) < 1) & (np.abs(px_c - (p0 + dp)) < 1)
+            if not m.any():
+                continue
+            d = (sc_c[m] - line) ** 2 + (px_c[m] - sample) ** 2
+            i = np.argmin(d)
+            if d[i] < bd:
+                bd = d[i]
+                best = (lon_c[m][i], lat_c[m][i])
+    return best if best else (None, None)
+
+
+def detect_craters(I, cell_m, sun, crop_origin, meta, max_out=25):
+    """Hough crater detection on the OHRC analysis grid + shadow-projection
+    depth estimate: for sun elevation theta, a rim shadow of length L
+    implies depth ~ L * tan(theta) (flat-floor approximation). Positions
+    are mapped to selenographic coordinates via the geometry CSV."""
+    sx, sy, sz = sun_vector_image_frame(sun["sun_azimuth_deg"],
+                                        sun["sun_elevation_deg"])
+    tan_el = np.tan(np.radians(sun["sun_elevation_deg"]))
+    u = np.array([-sx, -sy])                       # shadow travel direction
+    u /= (np.linalg.norm(u) + 1e-9)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    g = clahe.apply(np.clip(I, 0, 255).astype(np.uint8))
+    g = cv2.medianBlur(g, 3)
+    circles = cv2.HoughCircles(g, cv2.HOUGH_GRADIENT, dp=1.2, minDist=26,
+                               param1=110, param2=38, minRadius=5,
+                               maxRadius=90)
+    if circles is None:
+        return []
+    geo = _load_geo_grid()
+    r0, c0 = crop_origin
+    I32 = I.astype(np.float32)
+    h, w = I32.shape
+    floor_med = float(np.median(I32))
+
+    out = []
+    for x, y, rad in circles[0][:80]:
+        x, y, rad = float(x), float(y), float(rad)
+        if not (rad + 2 < x < w - rad - 2 and rad + 2 < y < h - rad - 2):
+            continue
+        ring = []
+        for t in np.linspace(0, 2 * np.pi, 36):
+            ring.append(I32[int(y + rad * np.sin(t)),
+                            int(x + rad * np.cos(t))])
+        rim = float(np.mean(ring))
+        # walk from the rim on the shadow side; measure the dark run
+        dark_best = 0
+        p0 = np.array([x + u[0] * rad * 0.35, y + u[1] * rad * 0.35])
+        run = 0
+        for t in np.arange(0, rad * 1.6, 1.0):
+            px, py = p0[0] + u[0] * t, p0[1] + u[1] * t
+            xi, yi = int(round(px)), int(round(py))
+            if not (0 <= xi < w and 0 <= yi < h):
+                break
+            if I32[yi, xi] < 0.55 * rim:
+                run += 1
+                dark_best = max(dark_best, run)
+            else:
+                run = 0
+        shadow_m = dark_best * cell_m
+        depth = shadow_m * tan_el
+        if dark_best < 3:                          # no measurable shadow
+            continue
+        lat, lon = None, None
+        _g = _geo_lookup(geo, r0 + y * 4, c0 + x * 4)
+        if _g is not None and _g[0] is not None:
+            lon, lat = _g  # CSV column order is Longitude, Latitude
+        out.append({
+            "x_px": round(x, 1), "y_px": round(y, 1),
+            "radius_px": round(rad, 1),
+            "radius_m": round(rad * cell_m, 1),
+            "lon_deg": None if lon is None else round(float(lon), 5),
+            "lat_deg": None if lat is None else round(float(lat), 5),
+            "shadow_len_m": round(shadow_m, 1),
+            "depth_est_m": round(depth, 1),
+        })
+    out.sort(key=lambda c: -c["radius_m"])
+    return out[:max_out]
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     meta = parse_label()
@@ -283,41 +389,99 @@ def main():
     dem -= dem.min()
     print("SFS DEM range (m): %.2f .. %.2f" % (dem.min(), dem.max()))
 
-    # reference product selection, in priority order:
-    # 1. a REAL reference in data/reference/lro_nac/ (LROC NAC crop or a
-    #    second Chandrayaan-2 OHRC product) - drop the file in and re-run,
-    #    zero code changes
-    # 2. simulated second pass of the real image (current stand-in)
-    lro_dir = os.path.join(ROOT, "data", "reference", "lro_nac")
-    real_ref = None
-    if os.path.isdir(lro_dir):
-        for fn in sorted(os.listdir(lro_dir)):
-            if fn.lower().endswith((".png", ".jpg", ".tif", ".tiff", ".img")):
-                real_ref = os.path.join(lro_dir, fn)
-                break
-    if real_ref:
-        print("REAL reference found:", real_ref)
-        if real_ref.lower().endswith((".img", ".tif", ".tiff")):
-            raw = np.fromfile(real_ref, dtype=np.uint16)
-            side = int(np.sqrt(len(raw)))
-            r_img = raw[: side * side].reshape(side, side).astype(np.float32)
-        else:
-            r_img = np.asarray(Image.open(real_ref).convert("L"),
-                               dtype=np.float32)
-        ref = cv2.resize(r_img, (1024, 1024), interpolation=cv2.INTER_AREA)
-        ref = simulate_second_pass(ref, rot_deg=0.0, scale=1.0, gamma=1.0,
-                                   seed=3)  # identity; keeps uint8 + noise floor
-        ref = np.clip(255.0 * (ref / 255.0) ** 1.0, 0, 255).astype(np.uint8)
-        meta["reference_source"] = "real reference product: %s" % \
-            os.path.basename(real_ref)
-    else:
+    # ---- real reference: LROC NAC selection over all downloaded products ----
+    import lroc
+    prods = lroc.all_products()
+    lroc_meta = None
+    ref = None
+    if prods:
+        print("LROC products found:", len(prods))
+        src_small = cv2.resize(I, (384, 384))
+        src_small = np.clip(src_small, 0, 255).astype(np.uint8)
+        cands = lroc.select_best(src_small, prods)
+        # final selection by POST-alignment translation NCC - the coarse
+        # template score alone is not reliable on self-similar terrain
+        best, lroc_meta, best_ncc, best_ref = None, None, -1.0, None
+        for prod, loc, score in cands[:4]:
+            ref_c, meta_c = lroc.build_reference(src_small, prod, loc,
+                                                 out=1024)
+            if ref_c is None:
+                print("  candidate %s rejected: %s"
+                      % (prod["product_id"], meta_c))
+                continue
+            ncc = (meta_c.get("translation") or {}).get("ncc", -1.0)
+            print("  candidate %s: post-alignment NCC %.3f"
+                  % (prod["product_id"], ncc))
+            if ncc > best_ncc:
+                best, lroc_meta, best_ncc, best_ref = \
+                    prod, meta_c, ncc, ref_c
+        if best and best_ncc > 0.2:
+            ref = best_ref
+            print("selected reference:", best["product_id"],
+                  "| post-alignment NCC %.3f" % best_ncc)
+    if ref is None:
         ref = simulate_second_pass(I)
         ls_diag = render_shaded(dem, sun["sun_azimuth_deg"] + 55.0, 24.0,
                                 cell_m=cell_m)
         save_png(ls_diag, os.path.join(OUT_DIR, "ls_render_diagnostic.png"))
         meta["reference_source"] = ("simulated second pass of the OHRC scene "
-                                    "(no real reference in "
-                                    "data/reference/lro_nac/ yet)")
+                                    "(no usable LROC overlap found)")
+    else:
+        meta["reference_source"] = (
+            "REAL NASA LROC NAC CDR %s, registered to the OHRC grid by a "
+            "RANSAC-verified homography (%d inliers)."
+            % (lroc_meta["product_id"], lroc_meta["inliers"]))
+        meta["lroc"] = lroc_meta
+        ref = ref.astype(np.float32)
+    save_png(ref, os.path.join(OUT_DIR, "reference.png"))
+    np.save(os.path.join(OUT_DIR, "reference_dem_input.npy"), np.asarray(ref))
+
+    # ---- cross-mission consistency: OHRC-relief hillshade vs LROC image ----
+    try:
+        hill = render_shaded(dem, sun["sun_azimuth_deg"],
+                             sun["sun_elevation_deg"], cell_m=cell_m)
+        ref_f = ref.astype(np.float64) / 255.0
+        hill_f = (hill - hill.min()) / (hill.max() - hill.min() + 1e-9)
+        mask = (ref_f > 0.02) & (hill_f > 0.02)
+        if mask.sum() > 1000:
+            pear = float(np.corrcoef(ref_f[mask], hill_f[mask])[0, 1])
+        else:
+            pear = None
+        # illumination-robust check: correlation of gradient magnitudes
+        gx1 = cv2.Sobel(ref_f, cv2.CV_64F, 1, 0)
+        gy1 = cv2.Sobel(ref_f, cv2.CV_64F, 0, 1)
+        gx2 = cv2.Sobel(hill_f, cv2.CV_64F, 1, 0)
+        gy2 = cv2.Sobel(hill_f, cv2.CV_64F, 0, 1)
+        mag1 = np.hypot(gx1, gy1)[mask]
+        mag2 = np.hypot(gx2, gy2)[mask]
+        grad_corr = (float(np.corrcoef(mag1, mag2)[0, 1])
+                     if mask.sum() > 1000 else None)
+        meta["cross_mission_consistency"] = {
+            "method": ("independent LROC NAC observation vs OHRC "
+                       "shape-from-shading relief: raw Pearson plus "
+                       "illumination-robust gradient-magnitude correlation"),
+            "pearson": pear,
+            "gradient_corr": grad_corr,
+            "valid_px": int(mask.sum()) if pear is not None else 0,
+        }
+        print("cross-mission consistency: pearson=%.3f gradient=%.3f"
+              % (pear if pear is not None else float('nan'),
+                 grad_corr if grad_corr is not None else float('nan')))
+    except Exception as exc:
+        meta["cross_mission_consistency"] = {"error": str(exc)}
+
+    # ---- crater identification + shadow-projection depths ------------------
+    try:
+        craters = detect_craters(I, cell_m, sun, crop_origin=(r0, c0),
+                                 meta=meta)
+        meta["craters_detected"] = len(craters)
+        with open(os.path.join(OUT_DIR, "craters.json"), "w") as f:
+            json.dump(craters, f, indent=2)
+        print("craters detected:", len(craters))
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        meta["craters_detected"] = 0
     save_png(ref, os.path.join(OUT_DIR, "reference.png"))
 
     save_png(I, os.path.join(OUT_DIR, "source.png"))
