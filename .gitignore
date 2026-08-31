@@ -1,0 +1,22 @@
+# ---- data (1 GB+ scenes, model weights - regeneratable) ----
+data/
+backend/models/*.onnx
+*.onnx
+Unconfirmed*.crdownload
+*.zip
+
+# ---- secrets ----
+.env
+backend/.env
+frontend/.env
+_test_integrations.py
+
+
+# ---- python ----
+__pycache__/
+*.pyc
+.venv/
+
+# ---- node/vercel ----
+node_modules/
+.vercel/

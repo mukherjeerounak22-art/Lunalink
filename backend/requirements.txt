@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+numpy
+opencv-python
+scipy
+pillow
+onnxruntime  # optional - enables the learned descriptor branch

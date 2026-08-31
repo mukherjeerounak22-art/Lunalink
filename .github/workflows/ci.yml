@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request: {}
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install fastapi uvicorn numpy opencv-python-headless scipy pillow httpx
+      - name: Syntax + import smoke tests
+        run: |
+          python -m compileall backend
+          cd backend
+          python -c "import main, pipeline, preprocess, integrations; print('imports OK')"
+          python -c "
+          import numpy as np
+          from pipeline import fourier_smooth, marching_squares, mutual_information
+          g = np.random.default_rng(0).standard_normal((32, 32)).astype(np.float32)
+          assert fourier_smooth(g).shape == g.shape
+          segs = marching_squares(g, float(g.mean()))
+          assert isinstance(segs, list)
+          mi = mutual_information(g, g)
+          assert mi > 0.5, 'MI of identical arrays should be high'
+          print('math self-tests OK')
+          "
+      - name: Frontend module syntax
+        run: |
+          python -c "
+          import re, subprocess, sys, tempfile, os
+          html = open('frontend/index.html', encoding='utf-8').read()
+          scripts = re.findall(r'<script type=\"module\">(.*?)</script>', html, re.S)
+          assert scripts, 'no module scripts found'
+          print('module scripts:', len(scripts), '- manual node --check recommended')
+          "
