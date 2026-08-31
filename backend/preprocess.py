@@ -135,14 +135,16 @@ def shape_from_shading(image, sun_az_deg, sun_el_deg, cell_m=1.0,
     t = np.clip(t, -max_t, max_t)
     t[shadow] = 0.0
     p, q = -sx * t, -sy * t
-    # FFT Poisson solve: lap h = dp/dx + dq/dy on a windowed domain
+    # FFT Poisson solve: lap h = dp/dx + dq/dy on a windowed domain.
+    # Must be a full 2-D FFT (rfft is 1-D along the last axis and would
+    # divide a 1-D spectrum by a 2-D Laplacian - caught by verify_robust).
     w = np.hanning(p.shape[0])[:, None] * np.hanning(p.shape[1])[None, :]
     div = np.gradient(p * w, axis=0) + np.gradient(q * w, axis=1)
     fy = np.fft.fftfreq(div.shape[0])[:, None]
-    fx = np.fft.rfftfreq(div.shape[1])[None, :]
+    fx = np.fft.fftfreq(div.shape[1])[None, :]
     k2 = (2 * np.pi * fy) ** 2 + (2 * np.pi * fx) ** 2
     k2[0, 0] = 1.0
-    h = np.fft.irfft(np.fft.rfft(div) / (-k2), div.shape[1])
+    h = np.real(np.fft.ifft2(np.fft.fft2(div) / (-k2)))
     h -= h.mean()
     # Radiometric (non-metric) height calibration: a single image cannot fix
     # absolute height (albedo variation is entangled with slope), so scale the

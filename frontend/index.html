@@ -440,6 +440,11 @@ function renderSceneMeta() {
     ["DEM range", m.dem_range_m ? `${m.dem_range_m[0].toFixed(1)}–${m.dem_range_m[1].toFixed(1)} m` : "–"],
   ]);
   $("metaNote").textContent = m.provenance || "";
+  /* auto-fit the UPLOAD window's sun geometry to this scene's mission
+     sun-parameter values (unless the user manually overrode them) */
+  if (window.__setSun && sun.sun_azimuth_deg != null) {
+    window.__setSun(sun.sun_azimuth_deg, sun.sun_elevation_deg ?? 30);
+  }
 }
 $("sceneSel").addEventListener("change", () => { _cacheMatch = null; renderSceneMeta(); runMatch(); });
 </script>
@@ -557,8 +562,27 @@ dz.addEventListener("drop", e => {
   if (e.dataTransfer.files[0]) analyze(e.dataTransfer.files[0]);
 });
 fi.addEventListener("change", () => { if (fi.files[0]) analyze(fi.files[0]); });
-$("azRange").addEventListener("input", () => $("azOut").value = $("azRange").value + "°");
-$("elRange").addEventListener("input", () => $("elOut").value = $("elRange").value + "°");
+/* auto-fit sun geometry from scene/dataset metadata (mission sun-parameter
+   file drives the physics, sliders only override it) */
+let sunTouched = false;
+window.__setSun = (az, el) => {
+  if (sunTouched) return;
+  $("azRange").value = Math.round(az);
+  $("elRange").value = Math.round(el);
+  $("azOut").value = Math.round(az) + "°";
+  $("elOut").value = Math.round(el) + "°";
+};
+
+$("azRange").addEventListener("input", () => {
+  sunTouched = true;
+  $("azOut").value = $("azRange").value + "°";
+  if (lastPayload) renderHillshade(lastPayload);
+});
+$("elRange").addEventListener("input", () => {
+  sunTouched = true;
+  $("elOut").value = $("elRange").value + "°";
+  if (lastPayload) renderHillshade(lastPayload);
+});
 
 async function analyze(file) {
   lastFile = file;

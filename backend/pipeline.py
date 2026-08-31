@@ -41,6 +41,8 @@ def _embed(image, keypoints):
     descriptor. Returns (N, D) L2-normalized embeddings. Patch extraction is
     edge-padded + vectorized (no per-pixel Python loops)."""
     img = np.clip(image, 0, 255).astype(np.float32) / 255.0
+    if not keypoints:
+        return np.zeros((0, 128), dtype=np.float32)
     half = PATCH // 2
     padded = np.pad(img, half, mode="edge")
     patches = np.empty((len(keypoints), 1, PATCH, PATCH), dtype=np.float32)
