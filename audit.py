@@ -45,7 +45,7 @@ check("learned ONNX loaded", h["learned_model_loaded"] is True)
 
 print("=== 2. /craters feeds scene selector + metadata panel ===")
 craters = get("/craters")
-check("2 scenes", len(craters) == 2)
+check("at least 2 scenes", len(craters) >= 2, f"({len(craters)})")
 real = [c for c in craters if c["kind"] == "real"][0]
 m = real["metadata"]
 check("metadata fields for metaKv panel",

@@ -9,6 +9,7 @@ Static: /  serves frontend/index.html, /static serves processed imagery.
 """
 import json
 import os
+import re
 import time
 
 import numpy as np
@@ -19,9 +20,19 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 import pipeline
+import ingest
 import integrations
 
 integrations.init_sentry()
+
+# dynamic scenes registered via /ingest_product or /analyze_upload
+_registry = ingest.load_registry()
+
+
+def _all_scenes():
+    merged = dict(SCENES)
+    merged.update(_registry)
+    return merged
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROC = os.path.join(ROOT, "data", "processed")
@@ -59,9 +70,10 @@ _cache = {"match": {}, "scene_meta": {}}
 
 
 def _scene_dir(crater_id):
-    if crater_id not in SCENES:
+    scenes = _all_scenes()
+    if crater_id not in scenes:
         raise HTTPException(404, "unknown scene id")
-    d = SCENES[crater_id]["dir"]
+    d = scenes[crater_id]["dir"]
     if not os.path.isdir(d):
         raise HTTPException(503, "scene not preprocessed yet - run "
                                  "backend/preprocess.py first")
@@ -88,7 +100,7 @@ def health():
 @app.get("/craters")
 def craters():
     out = []
-    for cid, s in SCENES.items():
+    for cid, s in _all_scenes().items():
         entry = {"id": cid, "name": s["name"], "subtitle": s["subtitle"],
                  "kind": s["kind"]}
         d = s["dir"]
@@ -121,9 +133,9 @@ def match(crater_id: str):
     integrations.breadcrumb("match start", data={"scene": crater_id})
     payload = pipeline.match_pair(src, ref)
     payload["scene_id"] = crater_id
-    payload["scene_name"] = SCENES[crater_id]["name"]
-    payload["source_image"] = "/static/%s/source.png" % SCENES[crater_id]["slug"]
-    payload["reference_image"] = "/static/%s/reference.png" % SCENES[crater_id]["slug"]
+    payload["scene_name"] = _all_scenes()[crater_id]["name"]
+    payload["source_image"] = "/static/%s/source.png" % _all_scenes()[crater_id]["slug"]
+    payload["reference_image"] = "/static/%s/reference.png" % _all_scenes()[crater_id]["slug"]
     payload["metadata"] = meta
     payload["evaluation_notes"] = (
         "RMSE reported in reference-image pixels. When RMSE approaches the "
@@ -256,11 +268,41 @@ def narrate(crater_id: str):
             "metrics_summary": summary}
 
 
+@app.post("/ingest_product")
+def ingest_product(path: str, scene_id: str = None,
+                   crop_line: int = None, crop_sample: int = None,
+                   crop_size: int = 4096,
+                   sun_az: float = 270.8, sun_el: float = 10.0):
+    """Turn ANY Chandrayaan-2 PDS4 product (XML+IMG) into a full matchable
+    scene: SFS DEM, craters, terrain. `path` is a directory under data/raw
+    (or an absolute path). crop_line/crop_sample pick any region; omit them
+    to auto-select the most feature-rich window."""
+    import ingest as ing
+    p = path if os.path.isabs(path) else os.path.join(ROOT, "data", "raw", path)
+    if not os.path.isdir(p):
+        raise HTTPException(404, "product directory not found: %s" % p)
+    crop = (crop_line, crop_sample) if crop_line is not None else None
+    try:
+        res = ing.ingest_product_dir(p, scene_id=scene_id, crop=crop,
+                                     crop_size=crop_size, sun_az=sun_az,
+                                     sun_el=sun_el)
+    except FileNotFoundError as exc:
+        raise HTTPException(400, str(exc))
+    global _registry
+    _registry = ingest.load_registry()
+    integrations.capture_message  # breadcrumb below
+    integrations.breadcrumb("scene ingested", data={
+        "scene": res["scene_id"], "product": p})
+    return res
+
+
 @app.post("/analyze_upload")
 async def analyze_upload(
     file: UploadFile = File(...),
     sun_az: float = Form(315.0),
     sun_el: float = Form(30.0),
+    make_scene: bool = Form(False),
+    scene_name: str = Form(""),
 ):
     """Upload any lunar/surface image -> shape-from-shading relief -> the
     same terrain payload the 3D hologram consumes (grid + marching-squares
@@ -291,7 +333,7 @@ async def analyze_upload(
     contours = {"levels_m": levels,
                 "segments": [pipeline.marching_squares(g, lv)
                              for lv in levels]}
-    return {
+    result = {
         "scene_id": "upload:%s" % (file.filename or "image"),
         "grid": {"n": GRID_N, "cell_meters": 1.0,
                  "extent_m": float(GRID_N),
@@ -308,6 +350,30 @@ async def analyze_upload(
         },
         "cache": "fresh",
     }
+    if make_scene:
+        scene = _make_scene_from_upload(
+            np.asarray(img, dtype=np.uint8), file.filename, sun_az, sun_el,
+            scene_name)
+        global _registry
+        _registry = ingest.load_registry()
+        result["created_scene"] = scene["scene_id"]
+        result["craters"] = scene["craters"]
+    return result
+
+
+def _make_scene_from_upload(img_u8, filename, sun_az, sun_el, scene_name):
+    """Promote an uploaded image to a full matchable scene (SFS DEM +
+    craters) registered in the scene registry."""
+    import ingest as ing
+    sid = re.sub(r"[^A-Za-z0-9_-]", "_",
+                 scene_name or ("upload_%s" % os.path.splitext(
+                     filename or "image")[0]))[:48]
+    sid = "up_%s_%d" % (sid, int(time.time()) % 100000)
+    return ing.ingest_image(
+        img_u8, sid, cell_m=1.0, sun_az=sun_az, sun_el=sun_el,
+        provenance="Full scene created from an uploaded image; relief is a "
+                   "photometric approximation (non-metric).",
+        product_id=filename or "uploaded image")
 
 
 @app.get("/debug/sentry-test")

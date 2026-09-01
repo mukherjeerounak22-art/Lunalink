@@ -366,7 +366,10 @@ if (window.SENTRY_DSN_FRONTEND) {
             <canvas id="upCanvas2" width="560" height="560" style="width:100%" class="skel"></canvas></div>
         </div>
         <div class="kv" id="uploadKv" style="margin-top:12px"></div>
-        <button id="viewIn3dBtn" class="ghost" style="margin-top:12px" disabled>⬡ SEND TO TERRAIN 3D →</button>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px">
+          <button id="viewIn3dBtn" class="ghost" disabled>⬡ SEND TO TERRAIN 3D →</button>
+          <button id="sceneBtn" disabled>⚡ CREATE MATCHABLE SCENE</button>
+        </div>
         <div class="note" id="uploadNote">Relief from a single image is a photometric
         approximation (non-metric), reconstructed with the same pipeline as the OHRC scene.</div>
       </div>
@@ -663,6 +666,7 @@ async function analyze(file) {
       `<span>sun (az / el)</span><span>${$("azRange").value}° / ${$("elRange").value}°</span>` +
       `<span>contour levels</span><span>${payload.contours.levels_m.length}</span>`;
     $("viewIn3dBtn").disabled = false;
+    $("sceneBtn").disabled = false;
   } catch (e) {
     $("uploadKv").innerHTML = `<span>error</span><span>${String(e).slice(0, 80)}</span>`;
     $("upCanvas2").classList.remove("skel");
@@ -698,6 +702,35 @@ $("viewIn3dBtn").addEventListener("click", () => {
   if (!lastPayload) return;
   window.__buildTerrain(lastPayload);
   window.__showTab("terrain");
+});
+
+/* promote the analyzed upload to a full matchable scene (appears in the
+   MATCH window dropdown and runs the complete pipeline on it) */
+$("sceneBtn").addEventListener("click", async () => {
+  if (!lastFile) return;
+  const btn = $("sceneBtn");
+  btn.disabled = true; btn.textContent = "… building scene";
+  try {
+    const fd = new FormData();
+    fd.append("file", lastFile);
+    fd.append("sun_az", $("azRange").value);
+    fd.append("sun_el", $("elRange").value);
+    fd.append("make_scene", "true");
+    fd.append("scene_name", (lastFile.name || "scene").replace(/\.[^.]+$/, ""));
+    const r = await fetch(API + "/analyze_upload", { method: "POST", body: fd });
+    if (!r.ok) throw new Error("server responded " + r.status);
+    const j = await r.json();
+    $("uploadNote").textContent = "Scene '" + j.created_scene +
+      "' created — it is now selectable in 01 MATCH with the full pipeline.";
+    await window.__loadScenes();
+    const sel = $("sceneSel");
+    sel.value = j.created_scene;
+    sel.dispatchEvent(new Event("change"));
+  } catch (e) {
+    $("uploadNote").textContent = "Scene creation failed: " + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = "⚡ CREATE MATCHABLE SCENE";
+  }
 });
 </script>
 <script type="module">
