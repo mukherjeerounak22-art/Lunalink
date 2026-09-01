@@ -324,6 +324,7 @@ if (window.SENTRY_DSN_FRONTEND) {
           </div>
         </div>
         <button id="narrateBtn" class="ghost" style="margin-top:12px">🔊 NARRATE FOR JUDGES</button>
+        <button id="speakBtn" class="ghost" style="margin-top:8px">🗣️ READ ALOUD</button>
         <div id="narration" class="note"></div>
       </div>
 
@@ -443,7 +444,10 @@ if (window.SENTRY_DSN_FRONTEND) {
       <h2>Judge narration <em>/ Gemini · narrates metrics, never generates them</em></h2>
       <div class="narration-out" id="narrateOut">Narration appears here after you run a match.</div>
       <div class="mono-line" id="narrateMeta" style="margin-top:14px"></div>
-      <button id="narrateBtn2" class="ghost" style="margin-top:14px; width:auto; padding:9px 18px">🔊 NARRATE CURRENT SCENE</button>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px">
+        <button id="narrateBtn2" class="ghost">🔊 NARRATE CURRENT SCENE</button>
+        <button id="speakBtn2" class="ghost">🗣️ READ ALOUD</button>
+      </div>
     </div>
   </div>
 </section>
@@ -629,7 +633,12 @@ function renderMatch(m) {
                   m.metadata.provenance)) || "";
   $("refCap").textContent = "REFERENCE · " +
     (refSrc.indexOf("LROC") !== -1 ? "REAL LROC NAC — AUTO-SELECTED"
-                                   : "AUTO-GENERATED SECOND PASS");
+                                   : "SIMULATED SECOND PASS — AUTO-GENERATED");
+  /* carried into the 3-D terrain readout so the mesh view always names the
+     scene's match quality alongside the relief numbers */
+  window.__matchSummary = "match " + pct.toFixed(1) + "% · " +
+    (m.inlier_count ?? 0) + " inliers · RMSE " +
+    (m.rmse_px != null ? (+m.rmse_px).toFixed(2) : "–") + " px";
   drawOverlays(m);
 }
 
@@ -690,7 +699,7 @@ async function drawOverlays(m) {
   }
 }
 
-/* ---- narration (both buttons) ---- */
+/* ---- narration (both buttons) + voice playback ---- */
 async function narrate() {
   const id = window.__currentScene ? window.__currentScene() : "";
   if (!id) return;
@@ -703,14 +712,59 @@ async function narrate() {
       return;
     }
     const j = await r.json();
-    out.textContent = (j.source === "gemini" ? "[Gemini] " : "[local template] ") + j.narration;
+    const labelled = (j.source === "gemini" ? "[Gemini] " : "[local template] ") + j.narration;
+    out.textContent = labelled;
+    /* mirror into the 01 MATCH window so judges see it where they are */
+    const n1 = $("narration");
+    if (n1) n1.textContent = labelled;
     $("narrateMeta").textContent = j.metrics_summary;
   } catch (e) {
-    out.textContent = "Narration unavailable — backend unreachable.";
+    out.textContent = "Narration unavailable — " + e.message;
   } finally { out.classList.remove("skel", "block"); }
+}
+
+/* voice narration — Web Speech API (offline, no API key, judge-friendly) */
+let __speaking = false;
+function setSpeakLabels(t) {
+  ["speakBtn", "speakBtn2"].forEach(id => { const b = $(id); if (b) b.textContent = t; });
+}
+function speakToggle() {
+  if (!("speechSynthesis" in window)) {
+    setSpeakLabels("voice needs Chrome/Edge");
+    return;
+  }
+  if (__speaking) {                          /* stop */
+    speechSynthesis.cancel();
+    __speaking = false;
+    setSpeakLabels("🗣️ READ ALOUD");
+    return;
+  }
+  const raw = (($("narration") || {}).textContent || "").replace(/^\[[^\]]+\]\s*/, "") ||
+              (($("narrateOut") || {}).textContent || "").replace(/^\[[^\]]+\]\s*/, "");
+  if (!raw || raw.indexOf("Narration appears here") === 0) {
+    setSpeakLabels("generate narration first");
+    setTimeout(() => setSpeakLabels("🗣️ READ ALOUD"), 2500);
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(raw);
+  u.rate = 1; u.pitch = 1; u.lang = "en-US";
+  const voices = speechSynthesis.getVoices();
+  const v = voices.find(v => /en[-_](GB|US)/i.test(v.lang) && /google|natural|zira|samantha/i.test(v.name)) ||
+            voices.find(v => /^en/i.test(v.lang));
+  if (v) u.voice = v;
+  u.onend = () => { __speaking = false; setSpeakLabels("🗣️ READ ALOUD"); };
+  u.onerror = () => { __speaking = false; setSpeakLabels("🗣️ READ ALOUD"); };
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+  __speaking = true;
+  setSpeakLabels("⏹ STOP VOICE");
 }
 $("narrateBtn").addEventListener("click", narrate);
 $("narrateBtn2").addEventListener("click", narrate);
+$("speakBtn").addEventListener("click", speakToggle);
+$("speakBtn2").addEventListener("click", speakToggle);
+/* warm up the voice list (some browsers load it async) */
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
 $("runBtn").addEventListener("click", runMatch);
 window.__runMatch = runMatch;
 /* NOTE: window.__checkHealth / window.__loadScenes are assigned in the
@@ -1006,7 +1060,8 @@ function buildTerrain(payload) {
     `${n}×${n} grid · cell ≈ ${G.cell_meters.toFixed(1)} m · extent ≈ ` +
     `${(G.extent_m/1000).toFixed(2)} km · relief ${G.zmin_m.toFixed(1)}–${G.zmax_m.toFixed(1)} m ` +
     `· vertical exaggeration ×${(vScale / horiz).toFixed(1)} · ` +
-    `${contours.levels_m.length} marching-squares contour levels · source: ${payload.scene_id}`;
+    `${contours.levels_m.length} marching-squares contour levels · source: ${payload.scene_id}` +
+    (window.__matchSummary ? ` · ${window.__matchSummary}` : "");
 }
 
 async function loadTerrain(id) {

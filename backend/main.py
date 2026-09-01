@@ -42,15 +42,16 @@ SCENES = {
     "ohrc_20210401": {
         "dir": os.path.join(PROC, "ohrc_real"),
         "slug": "ohrc_real",
-        "name": "CH-2 OHRC real scene",
-        "subtitle": "ch2_ohr_ncp_20210401T2357376656 - 13.47S, 25.19E",
+        "name": "Level 3 - CH-2 OHRC real scene (cross-mission, hard)",
+        "subtitle": "real ISRO radiance vs auto-selected NASA LRO NAC - "
+                    "13.47S, 25.19E",
         "kind": "real",
     },
     "tycho": {
         "dir": os.path.join(PROC, "tycho_synthetic"),
         "slug": "tycho_synthetic",
-        "name": "Tycho (synthetic stand-in)",
-        "subtitle": "43.37S, 348.68E - synthetic DEM pair",
+        "name": "Level 2 - Tycho synthetic stand-in (same-sensor, medium)",
+        "subtitle": "43.37S, 348.68E - Lommel-Seeliger rendered pair",
         "kind": "synthetic",
     },
 }

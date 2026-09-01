@@ -2,15 +2,8 @@
   "demo_tmc": {
     "dir": "C:\\Users\\user\\Downloads\\SIH\\data\\processed\\demo_tmc",
     "slug": "demo_tmc",
-    "name": "demo_tmc",
-    "subtitle": "ch2_tmc_demo_d_img_d18.img",
-    "kind": "user"
-  },
-  "up_ch2_ohrc_real_crop_1024_47315": {
-    "dir": "C:\\Users\\user\\Downloads\\SIH\\data\\processed\\up_ch2_ohrc_real_crop_1024_47315",
-    "slug": "up_ch2_ohrc_real_crop_1024_47315",
-    "name": "up_ch2_ohrc_real_crop_1024_47315",
-    "subtitle": "ch2_ohrc_real_crop_1024.png",
+    "name": "Level 1 - CH-2 TMC demo product",
+    "subtitle": "Level 1 - warm-up: simulated second-pass reference (same-sensor, easy)",
     "kind": "user"
   }
 }

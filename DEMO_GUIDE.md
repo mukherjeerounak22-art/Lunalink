@@ -59,9 +59,14 @@ exception), so a fresh clone is demo-ready:
    shading → SEND TO TERRAIN 3D (real polygon mesh) → CREATE MATCHABLE
    SCENE → the new scene appears in 01 MATCH with the auto-selected
    reference caption.
-4. **02 TERRAIN** — orbit the mesh; craters, contours, relief readout.
+4. **02 TERRAIN** — orbit the mesh; craters, contours, relief readout. The
+   readout carries the scene's match % — every scene switch rebuilds it.
 5. **04 NARRATE** — Gemini narrates the metrics (local-template fallback
-   is automatic if the quota is exhausted).
+   is automatic if the quota is exhausted); **🗣️ READ ALOUD** speaks it.
+6. **Scene ladder** — the dropdown is leveled: Level 1 CH-2 TMC demo
+   product (~59% match, easy) → Level 2 Tycho synthetic (~32%, medium) →
+   Level 3 CH-2 OHRC real scene (~2.5% vs the auto-selected NASA strip,
+   the honest cross-mission number).
 
 ## Pre-demo sanity check
 

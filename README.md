@@ -28,7 +28,15 @@ integration is optional and degrades to a no-op without keys. Total cost: $0.
 5. **Render** — a 72,962-triangle Three.js mesh of the Fourier-smoothed DEM
    with sub-pixel marching-squares contours.
 6. **Narrate** — Gemini turns the computed metrics into judge-friendly words,
-   with a local-template fallback; it never invents numbers.
+   with a local-template fallback; it never invents numbers. The browser can
+   read the narration aloud (Web Speech API, offline).
+
+Three **leveled demo scenes** ship out of the box: Level 1 — CH-2 TMC demo
+product (easy, ~59% match vs a simulated second pass), Level 2 — Tycho
+synthetic stand-in (medium, ~32%), Level 3 — CH-2 OHRC real scene (hard,
+~2.5%, cross-mission vs the auto-selected NASA LRO NAC strip). Selecting a
+scene re-runs the match and rebuilds the 3-D terrain for it; the terrain
+readout carries the scene's match quality.
 
 ## Architecture
 

@@ -43,7 +43,7 @@ Then verify against the Vercel page:
 | Check | Expected |
 |---|---|
 | Status badge (top right) | `backend online · SIFT + learned ONNX descriptor` — **hover it**: the tooltip must show your tunnel/Render URL, not the Vercel origin |
-| Scene dropdown (01 MATCH) | lists `CH-2 OHRC real scene`, `Tycho (synthetic stand-in)`, `demo_tmc` |
+| Scene dropdown (01 MATCH) | three **leveled** scenes: `Level 1 - CH-2 TMC demo product` (easy, 59%), `Level 2 - Tycho synthetic stand-in` (medium, 32%), `Level 3 - CH-2 OHRC real scene` (cross-mission vs NASA, hard, 2.5%) |
 | First match auto-runs | match ring fills, keypoints overlay on both canvases |
 | 02 TERRAIN | mesh auto-rotates; drag orbits, scroll zooms |
 | 03 UPLOAD → drop `data/demo_upload/ch2_ohrc_real_crop_web.jpg` | relief shading appears in ~5–15 s |
@@ -111,12 +111,14 @@ candidates + derived RANSAC budget).
 
 | UI element | What it does | What to say |
 |---|---|---|
-| **Scene dropdown** | Every scene = a folder under `data/processed/` with `metadata.json` (product ID, sun angles, footprint, DEM range). Selecting a scene auto-runs its match. | "Scenes are self-describing — the dropdown is generated from the mission metadata, not hard-coded." |
+| **Scene dropdown** | Every scene = a folder under `data/processed/` with `metadata.json` (product ID, sun angles, footprint, DEM range). Selecting a scene auto-runs its match **and rebuilds the 3-D terrain + narration target for that scene**. Three leveled scenes ship out of the box. | "Scenes are self-describing — the dropdown is generated from the mission metadata, not hard-coded." |
+| **The three levels** | **Level 1 — CH-2 TMC demo product** (easy, ~59% match, 469 inliers, simulated second-pass reference) · **Level 2 — Tycho synthetic stand-in** (medium, ~32% match, 218 inliers, RMSE 0.31 px) · **Level 3 — CH-2 OHRC real scene** (hard, ~2.5%, cross-mission vs auto-selected NASA LRO NAC `M1249388815LC`). | "We demo all three: easy proves the matcher, hard proves the honesty. Same pipeline, zero reconfiguration — and the reference image is auto-selected from the 8-strip NASA library in every case." |
 | **REAL ISRO DATA / SYNTHETIC STAND-IN tag** | The `.tag` shows provenance (`metadata.json:provenance`). Synthetic Tycho numbers are never mixed with real-scene numbers. | "We label provenance on-screen. The synthetic scene exists only as a stand-in; the flagship scene is real ISRO data." |
 | **▶ RUN MATCH** | `GET /match/{id}` → cache-aside (in-memory → Redis → fresh compute) → the whole Stage 3–6 pipeline. First run computes; later runs are instant (cache). | "First click computes for real; the cache layer is shown right there in the panel." |
 | **Match ring (inverted black card)** | Inlier ratio, animated SVG ring. | "Inliers = keypoints that survive geometric verification. This is the single headline number." |
 | **inliers / RMSE px / kp source / kp reference / cache layer** | Inlier count; reprojection RMSE over inliers (sub-pixel on good scenes); keypoint counts on both images; which cache tier answered. | "RMSE is the geometric error of the homography over the surviving matches — measured in pixels." |
-| **🔊 NARRATE FOR JUDGES** | `GET /narrate/{id}` → Gemini, narrating ONLY the computed metrics. Rate-limited to 20/min by a Redis sliding window. | See section 7. |
+| **🔊 NARRATE FOR JUDGES** | `GET /narrate/{id}` → Gemini, narrating ONLY the computed metrics. Rate-limited to 20/min by a Redis sliding window. The text also appears right here in this window. | See section 7. |
+| **🗣️ READ ALOUD** | Speaks the narration out loud via the browser's built-in speech engine (offline, no API key). Click again to stop. | "And it talks, too — the same verified numbers, spoken." |
 | **Method breakdown** (muted panel) | SIFT candidates vs **learned (ONNX)** candidates vs the **derived** RANSAC budget `k ≥ log(1−p)/log(1−w⁴)`. | "The RANSAC iteration count is derived live from the matcher's own inlier fraction — never hard-coded." |
 | **Scene metadata** (muted panel) | Product ID, acquisition time, band, footprint lat/lon, GSD, sun elevation/azimuth, incidence angle, DEM range, provenance note. | "Full traceability. Every number on screen comes from the mission's own metadata files." |
 | **Correspondences canvas** | Left = SOURCE (CH-2 OHRC), right = REFERENCE (caption says WHICH reference was auto-picked, e.g. `REAL LROC NAC — AUTO-SELECTED`). White dots = matches; bright/large = RANSAC inliers, faint = rejected. | "Bright dots survived geometric verification; faint dots were rejected. The matcher shows its own work." |
@@ -576,12 +578,21 @@ error/retry state. Dropdown lists exactly: `CH-2 OHRC real scene`,
 `Tycho (synthetic stand-in)`, `demo_tmc`. The default scene's match
 auto-runs.
 
-**T2 · Flagship match (real ISRO vs real NASA).** On `CH-2 OHRC real scene`:
-match ring ≈ **2.5%**, inliers **7**, RMSE ≈ **1.2 px**, craters **25**;
-Method breakdown: SIFT ≈ 90, learned (ONNX) ≈ 190 candidates; reference
-caption: `REFERENCE · REAL LROC NAC — AUTO-SELECTED`
-(`M1249388815LC`). *Talking point:* the honest cross-mission number —
-different cameras, orbits, suns; the low % IS the research problem.
+**T2 · Scene ladder (run ALL THREE).** The dropdown is leveled — demo them
+in order for the best narrative:
+- **Level 1 — `CH-2 TMC demo product`**: match ≈ **59.1%**, inliers **469**,
+  RMSE ≈ 0.63 px — same-sensor simulated second pass. "The matcher at full
+  confidence."
+- **Level 2 — `Tycho synthetic stand-in`**: match ≈ **31.7%**, inliers
+  **218**, RMSE ≈ 0.31 px — different render geometry, still same sensor
+  family. "Now the sun and viewing geometry differ."
+- **Level 3 — `CH-2 OHRC real scene`** (auto-runs on load): match ≈ **2.5%**,
+  inliers 7, RMSE ≈ 1.2 px, craters 25, SIFT ≈ 90 + learned ≈ 190;
+  reference caption: `REAL LROC NAC — AUTO-SELECTED (M1249388815LC)`.
+  "Cross-mission, cross-sun, cross-camera — the honest number, and exactly
+  the research problem."
+Every scene switch automatically rebuilds the 3-D terrain and re-targets
+narration; the terrain readout carries the scene's match % with it.
 
 **T3 · Terrain.** Switch to 02 TERRAIN: 192×192 grid, extent ≈ 1.0 km,
 relief ≈ 0–90 m, 8 contour levels, vertical exaggeration printed in the
@@ -618,10 +629,12 @@ pair together) → backend parses the PDS4 label, builds the scene
 automatically (~6 s), selects it in 01 MATCH: 4 craters detected, full
 pipeline run, reference auto-selected.
 
-**T9 · Gemini narration.** 01 MATCH (flagship scene) → 🔊 NARRATE FOR
+**T9 · Gemini narration + voice.** 01 MATCH (any scene) → 🔊 NARRATE FOR
 JUDGES → `[Gemini]` + ≤120-word summary quoting the computed metrics
 (rate-limited to 20/min by a Redis sliding window — that's the limiter
 working if you ever see a rate-limit message). Also try 04 NARRATION tab.
+Then click **🗣️ READ ALOUD** — the browser's speech engine reads the
+narration to the room (offline, no API key); click again to stop.
 
 **T10 · Persistence check (optional).** `data/processed/registry.json`
 now lists the scenes you created; each has `source.png / reference.png /
