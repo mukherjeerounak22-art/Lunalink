@@ -25,6 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(ROOT, "backend", "models", "descriptor.onnx")
 
 _session = None
+_embed_failed_once = False   # warn only once when the learned branch degrades
 if ort is not None and os.path.isfile(MODEL_PATH):
     _session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
 
@@ -39,7 +40,10 @@ def learned_model_loaded():
 def _embed(image, keypoints):
     """Embed PATCH x PATCH grayscale patches around keypoints via the ONNX
     descriptor. Returns (N, D) L2-normalized embeddings. Patch extraction is
-    edge-padded + vectorized (no per-pixel Python loops)."""
+    edge-padded + vectorized (no per-pixel Python loops). On any inference
+    failure the learned branch is disabled ONCE with a warning event and the
+    pipeline degrades to the documented SIFT-only fallback instead of a 500."""
+    global _session, _embed_failed_once
     img = np.clip(image, 0, 255).astype(np.float32) / 255.0
     if not keypoints:
         return np.zeros((0, 128), dtype=np.float32)
@@ -50,8 +54,19 @@ def _embed(image, keypoints):
         x, y = int(round(kp.pt[0])), int(round(kp.pt[1]))
         patches[i, 0] = padded[y:y + PATCH, x:x + PATCH]
     outs = []
-    for b in range(0, len(patches), 256):
-        outs.append(_session.run(None, {"patch": patches[b:b + 256]})[0])
+    try:
+        for b in range(0, len(patches), 256):
+            outs.append(_session.run(None, {"patch": patches[b:b + 256]})[0])
+    except Exception as exc:                                   # noqa: BLE001
+        if not _embed_failed_once:
+            _embed_failed_once = True
+            from integrations import capture_message
+            capture_message(
+                "ONNX descriptor inference failed (%s) - learned branch "
+                "disabled for this process, continuing with the SIFT-only "
+                "fallback." % exc, level="warning")
+        _session = None
+        return np.zeros((len(keypoints), 128), dtype=np.float32)
     emb = np.concatenate(outs, axis=0)
     return emb / (np.linalg.norm(emb, axis=1, keepdims=True) + 1e-8)
 

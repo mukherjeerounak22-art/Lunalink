@@ -54,7 +54,9 @@ check("metadata fields for metaKv panel",
                            "sun", "dem_range_m", "provenance")))
 
 print("=== 3. /match feeds MATCH window (all bound fields) ===")
-match = get("/match/ohrc_20210401")
+match = get("/match/ohrc_20210401") or {}
+if not match:
+    raise SystemExit("FATAL: /match returned no payload - is the backend up?")
 required = ["match_percentage", "inlier_count", "matches", "rmse_px",
             "n_keypoints_source", "n_keypoints_ref", "cache", "scene_id",
             "method_breakdown", "ransac", "source_image", "reference_image",

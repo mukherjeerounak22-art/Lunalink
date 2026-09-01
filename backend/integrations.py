@@ -31,7 +31,10 @@ UPSTASH_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "").rstrip("/")
 UPSTASH_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
 SENTRY_DSN_BACKEND = os.environ.get("SENTRY_DSN_BACKEND", "")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+# Use the "-latest" alias: pinned names (gemini-2.0-flash, gemini-2.5-flash-lite)
+# get RETIRED and start returning 404, while the alias always resolves to an
+# available model. flash-lite = the highest free-tier quota class.
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 NARRATE_RATE_LIMIT = int(os.environ.get("NARRATE_RATE_LIMIT", "20"))
 
 # --------------------------------------------------------------------------
@@ -186,7 +189,7 @@ def redis_get_json(key):
     try:
         r = httpx.get("%s/get/%s" % (UPSTASH_URL, key),
                       headers={"Authorization": "Bearer %s" % UPSTASH_TOKEN},
-                      timeout=10).json()
+                      timeout=15).json()
         v = r.get("result")
         return json.loads(v) if v else None
     except Exception as exc:                       # noqa: BLE001
