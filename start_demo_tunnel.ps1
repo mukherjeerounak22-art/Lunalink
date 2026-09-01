@@ -1,5 +1,5 @@
-# =====================================================================
-# start_demo_tunnel.ps1 — laptop-backend demo launcher (SIH26166)
+﻿# =====================================================================
+# start_demo_tunnel.ps1 - laptop-backend demo launcher (SIH26166)
 #
 # Starts:  1) the FastAPI backend on http://localhost:8000
 #          2) a FREE cloudflared HTTPS tunnel (no signup, no account)
@@ -8,7 +8,7 @@
 #
 # Why the tunnel: the Vercel page is HTTPS, and browsers block HTTPS
 # pages from calling plain-HTTP backends (mixed content). The tunnel
-# gives localhost:8000 a public HTTPS address — no other changes.
+# gives localhost:8000 a public HTTPS address - no other changes.
 #
 # One-time install (only if you don't have it):
 #     winget install Cloudflare.cloudflared
@@ -32,16 +32,28 @@ Start-Process -WindowStyle Hidden python `
     -WorkingDirectory "$root\backend"
 
 # --- 2. tunnel -------------------------------------------------------
-if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
+$cf = Get-Command cloudflared -ErrorAction SilentlyContinue
+if ($cf) { $cfExe = $cf.Source }
+else {
+    # winget machine-scope install lands here but may be missing from a
+    # stale PATH - check the known locations directly
+    $fallbacks = @(
+        "${env:ProgramFiles(x86)}\cloudflared\cloudflared.exe",
+        "$env:ProgramFiles\cloudflared\cloudflared.exe",
+        "$env:LOCALAPPDATA\Microsoft\WinGet\Links\cloudflared.exe"
+    ) | Where-Object { Test-Path $_ }
+    if ($fallbacks) { $cfExe = @($fallbacks)[0] }   # @() guards scalar unwrap
+}
+if (-not $cfExe) {
     Write-Host "cloudflared not found. Install it first:" -ForegroundColor Red
     Write-Host "    winget install Cloudflare.cloudflared"
     Write-Host "(backend is running locally at http://127.0.0.1:8000 in the meantime)"
     exit 1
 }
-Write-Host "[2/3] starting cloudflared quick tunnel (no signup needed) ..." -ForegroundColor Cyan
+Write-Host "[2/3] starting cloudflared quick tunnel ($cfExe) ..." -ForegroundColor Cyan
 $log = Join-Path $env:TEMP "sih26166_tunnel.log"
 Remove-Item $log -ErrorAction SilentlyContinue
-Start-Process -FilePath cloudflared `
+Start-Process -FilePath $cfExe `
     -ArgumentList 'tunnel','--url','http://localhost:8000',"--logfile",$log `
     -WindowStyle Hidden
 
@@ -57,7 +69,7 @@ foreach ($i in 1..45) {
     }
 }
 if (-not $url) {
-    Write-Host "Tunnel URL not found after 45 s — check $log" -ForegroundColor Red
+    Write-Host "Tunnel URL not found after 45 s - check $log" -ForegroundColor Red
     exit 1
 }
 
