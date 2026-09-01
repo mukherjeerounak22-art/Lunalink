@@ -76,6 +76,26 @@ def parse_pds4_label(xml_path):
     }
 
 
+def _read_product(xml_path):
+    """Label reader that handles BOTH formats: ISRO PDS4 (offset in the XML,
+    unsigned byte) and NASA PDS3-with-attached-header (LRO NAC: 5064-byte
+    header, int16 LSB, missing=-32768). Returns the unified label dict."""
+    lab = parse_pds4_label(xml_path)
+    if lab["lines"] and lab["dtype"]:
+        return lab
+    import lroc
+    p = lroc.parse_product(xml_path)
+    if p["lines"] and os.path.exists(p["img_path"]):
+        return {
+            "xml_path": xml_path, "img_path": p["img_path"],
+            "lines": p["lines"], "samples": p["samples"],
+            "dtype": "<i2", "offset": p["offset"],
+            "missing": str(p["missing"]), "start_time": p["start"],
+            "instrument": "LROC NAC", "scaling": str(p["scaling"]),
+        }
+    return lab
+
+
 def best_variance_window(arr, crop, n=5, stride=4):
     """Scan n candidate windows, return the origin of the highest-variance
     one (most feature-rich region for a demo)."""
@@ -95,8 +115,63 @@ def best_variance_window(arr, crop, n=5, stride=4):
     return best_origin
 
 
+def auto_select_reference(img, max_candidates=None, min_ncc=0.35):
+    """Nearest-matching reference selection from the LRO NAC reference
+    library (data/reference/lro_nac): coarse NCC locates the scene inside
+    every NAC strip, then each candidate is registered (template alignment
+    + SIFT homography refinement) and the best post-alignment NCC wins -
+    the same selection rule preprocess.py uses for the baked scene. Returns
+    (ref_u8_or_None, meta). When no strip overlaps, the caller falls back to
+    a simulated second pass."""
+    try:
+        import lroc
+        prods = lroc.all_products()
+        if not prods:
+            return None, {"note": "reference library empty - simulated "
+                                  "second pass generated"}
+        img_u8 = np.clip(img, 0, 255).astype(np.uint8)  # select_best expects 8-bit
+        cands = lroc.select_best(img_u8, prods)
+        if max_candidates:
+            cands = cands[:max_candidates]
+        if not cands:
+            return None, {"note": "no LROC NAC candidate found - simulated "
+                                  "second pass generated"}
+        best = None
+        for prod, loc, score in cands:
+            region, meta = lroc.build_reference(img_u8, prod, loc)
+            if region is None:
+                continue
+            t_ncc = float((meta.get("translation") or {}).get("ncc", 0.0))
+            # rank purely by post-alignment template NCC - the same rule
+            # preprocess.py uses for the baked scene (SIFT refinement inside
+            # build_reference still sharpens the winning candidate)
+            if best is None or t_ncc > best[0]:
+                best = (t_ncc, region, meta)
+        if best is None:
+            return None, {"note": "no LROC NAC strip could be registered "
+                                  "against this upload - simulated second "
+                                  "pass generated"}
+        _, region, meta = best
+        t_ncc = float((meta.get("translation") or {}).get("ncc", 0.0))
+        if not ((meta.get("sift_refined") and meta.get("inliers", 0) >= 10)
+                or t_ncc >= min_ncc):
+            return None, {"note": "no LROC NAC strip overlaps this upload "
+                                  "(best registration NCC %.2f < %.2f) - "
+                                  "simulated second pass generated"
+                                  % (t_ncc, min_ncc)}
+        meta = dict(meta)
+        meta["selection"] = ("AUTO-SELECTED as the nearest overlapping "
+                             "product among %d LROC NAC strips (post-"
+                             "alignment NCC %.2f)" % (len(prods), t_ncc))
+        return region, meta
+    except Exception as exc:                                   # noqa: BLE001
+        return None, {"note": "reference auto-selection failed: %s - "
+                              "simulated second pass generated" % exc}
+
+
 def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
-                 provenance="", product_id=None, geo=None, gsd_note=None):
+                 provenance="", product_id=None, geo=None, gsd_note=None,
+                 auto_ref=True):
     """Run the full scene chain on an arbitrary 8-bit image:
     SFS DEM -> craters/shadows -> save + register. Returns scene entry."""
     img = np.clip(img_u8, 0, 255).astype(np.float32)
@@ -124,9 +199,23 @@ def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
     os.makedirs(scene_dir, exist_ok=True)
     cv2.imwrite(os.path.join(scene_dir, "source.png"),
                 np.clip(img, 0, 255).astype(np.uint8))
-    # reference product: simulated second pass (radiometric + slight
-    # geometric offset) so ingested scenes are fully matchable
-    ref = simulate_second_pass(img)
+    # reference product: auto-selected from the LRO NAC reference library
+    # when a strip overlaps the source (nearest-match by NCC + registration
+    # quality); otherwise a simulated second pass (radiometric + slight
+    # geometric offset) so every ingested scene is fully matchable
+    ref, ref_meta = (auto_select_reference(img) if auto_ref
+                     else (None, None))
+    if ref is None:
+        ref = simulate_second_pass(img)
+        meta["reference_source"] = (
+            "SIMULATED SECOND PASS (auto-generated): gamma + radiance "
+            "gradient + noise + slight rotation/scale homography of the "
+            "source. %s" % ((ref_meta or {}).get("note", ""))).strip()
+    else:
+        meta["reference_source"] = (
+            "REAL NASA LROC NAC %s - AUTO-SELECTED as the nearest "
+            "overlapping reference product." % ref_meta.get("product_id", ""))
+        meta["lroc"] = ref_meta
     save_png(ref, os.path.join(scene_dir, "reference.png"))
     np.save(os.path.join(scene_dir, "dem.npy"), dem.astype(np.float32))
 
@@ -169,7 +258,7 @@ def ingest_product_dir(product_dir, scene_id=None, crop=None, crop_size=4096,
     if not xml_path:
         raise FileNotFoundError("no PDS4 label (.xml) with .IMG in "
                                 + product_dir)
-    lab = parse_pds4_label(xml_path)
+    lab = _read_product(xml_path)
     if lab["lines"] == 0 or lab["samples"] == 0:
         raise ValueError("label lacks Line/Sample dimensions")
     if lab["dtype"] is None:

@@ -83,6 +83,59 @@ def mutual_information(a, b, bins=64):
 
 
 # --------------------------------------------------------------------------
+# Fourier-Mellin coarse registration (frequency domain, Reddy & Chatterji 1996)
+# --------------------------------------------------------------------------
+def fourier_mellin_coarse(src, ref):
+    """Rotation/scale/translation estimate purely in the frequency domain:
+    log-magnitude of the 2-D FFT -> log-polar resample -> phase correlation
+    gives the rotation (angular shift) and scale (log-radius shift); a second
+    phase correlation after de-rotating/de-scaling gives the translation.
+    Diagnostic only - fine registration is SIFT + RANSAC."""
+    try:
+        a = np.clip(src, 0, 255).astype(np.float32)
+        b = np.clip(ref, 0, 255).astype(np.float32)
+        if a.shape != b.shape:
+            b = cv2.resize(b, (a.shape[1], a.shape[0]))
+        h, w = a.shape
+        maxR = min(h, w) // 2
+        n_ang, n_rad = 360, 256
+        center = (w / 2.0, h / 2.0)
+
+        def logspec(img):
+            F = np.fft.fftshift(np.fft.fft2(img - img.mean()))
+            return np.log(np.abs(F) + 1.0)
+
+        pa = cv2.warpPolar(logspec(a), (n_ang, n_rad), center, maxR,
+                           cv2.WARP_POLAR_LOG)
+        pb = cv2.warpPolar(logspec(b), (n_ang, n_rad), center, maxR,
+                           cv2.WARP_POLAR_LOG)
+        pa -= pa.mean(); pb -= pb.mean()
+        (dx_a, dy_a), resp_lp = cv2.phaseCorrelate(pa, pb)
+        rot = float(dx_a) * 360.0 / n_ang                    # angle axis shift
+        scale = float(np.clip(np.exp(float(dy_a) * np.log(maxR) / n_rad),
+                              0.5, 2.0))                     # log-radius shift
+        # translation: cancel the estimated rotation+scale on the source,
+        # then plain phase correlation against the reference
+        M = cv2.getRotationMatrix2D(center, rot, scale)
+        a_warp = cv2.warpAffine(a, M, (w, h))
+        (dx_t, dy_t), resp_t = cv2.phaseCorrelate(a_warp - a_warp.mean(),
+                                                  b - b.mean())
+        return {
+            "rotation_deg": round(-rot, 3),
+            "scale": round(1.0 / scale, 4),
+            "translation_px": [round(float(dx_t), 2), round(float(dy_t), 2)],
+            "logpolar_response": round(float(resp_lp), 4),
+            "phasecorr_response": round(float(resp_t), 4),
+            "method": "log-magnitude FFT -> log-polar -> phase correlation "
+                      "(Reddy-Chatterji Fourier-Mellin)",
+            "role": "coarse pre-alignment diagnostic; fine registration is "
+                    "SIFT + RANSAC homography",
+        }
+    except Exception as exc:                                   # noqa: BLE001
+        return {"error": str(exc)}
+
+
+# --------------------------------------------------------------------------
 # Stage 4 + 5 + 6 - match (SIFT), verify (RANSAC/DLT), evaluate (RMSE)
 # --------------------------------------------------------------------------
 def match_pair(source_img, reference_img, ransac_thresh=3.0, confidence=0.99):
@@ -154,7 +207,9 @@ def match_pair(source_img, reference_img, ransac_thresh=3.0, confidence=0.99):
         confidence=confidence)
     inliers = inlier_mask.ravel().astype(bool)
     inlier_count = int(inliers.sum())
-    inlier_ratio = inlier_count / len(sift_candidates)
+    # denominator = ALL candidate correspondences (SIFT + learned union),
+    # otherwise the union branch can push the ratio above 1
+    inlier_ratio = inlier_count / max(len(pts1), 1)
 
     # Problem 3 - derived iteration budget from the matcher's OWN inlier
     # fraction w, minimal sample s=4 (homography), confidence p:
@@ -189,6 +244,7 @@ def match_pair(source_img, reference_img, ransac_thresh=3.0, confidence=0.99):
         },
         "status": "ok",
     })
+    payload["fourier_mellin"] = fourier_mellin_coarse(src, ref)
     return payload
 
 

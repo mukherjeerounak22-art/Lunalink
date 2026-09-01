@@ -295,7 +295,7 @@ if (window.SENTRY_DSN_FRONTEND) {
         <div class="img-grid">
           <div><div class="img-cap">SOURCE · CH-2 OHRC</div>
             <canvas id="cvA" width="560" height="560" style="width:100%" class="skel" aria-label="Source image with keypoints"></canvas></div>
-          <div><div class="img-cap">REFERENCE · SECOND PASS</div>
+          <div><div class="img-cap" id="refCap">REFERENCE · AUTO-SELECTED</div>
             <canvas id="cvB" width="560" height="560" style="width:100%" class="skel" aria-label="Reference image with keypoints"></canvas></div>
         </div>
       </div>
@@ -337,7 +337,7 @@ if (window.SENTRY_DSN_FRONTEND) {
           or click to browse · JPG/PNG · max 25 MB<br>
           <span class="mono-line">shape-from-shading → Fourier low-pass → holographic mesh</span>
         </div>
-        <input type="file" id="fileInput" accept="image/*" class="visually-hidden">
+        <input type="file" id="fileInput" accept="image/*,.zip,.img,.IMG,.xml,.XML" class="visually-hidden">
       </div>
       <div class="panel">
         <h2>Sun geometry <em>/ assumed for reconstruction</em></h2>
@@ -382,7 +382,7 @@ if (window.SENTRY_DSN_FRONTEND) {
   <div class="layout" style="grid-template-columns:1fr">
     <div class="panel raised">
       <h2>Judge narration <em>/ Gemini · narrates metrics, never generates them</em></h2>
-      <div class="narration-out skel block" id="narrateOut">Narration appears here after you run a match.</div>
+      <div class="narration-out" id="narrateOut">Narration appears here after you run a match.</div>
       <div class="mono-line" id="narrateMeta" style="margin-top:14px"></div>
       <button id="narrateBtn2" class="ghost" style="margin-top:14px; width:auto; padding:9px 18px">🔊 NARRATE CURRENT SCENE</button>
     </div>
@@ -479,7 +479,15 @@ function renderSceneMeta() {
     window.__setSun(sun.sun_azimuth_deg, sun.sun_elevation_deg ?? 30);
   }
 }
-$("sceneSel").addEventListener("change", () => { _cacheMatch = null; renderSceneMeta(); runMatch(); });
+/* module 2 owns the match cache & pipeline; reach them via window so this
+   handler can never throw a ReferenceError (strict-mode modules) and silently
+   kill the scene-change -> re-match flow (the stuck-skeleton bug) */
+$("sceneSel").addEventListener("change", () => {
+  renderSceneMeta();
+  if (window.__resetMatchCache) window.__resetMatchCache();
+  if (window.__runMatch) window.__runMatch();
+});
+
 </script>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -509,6 +517,12 @@ async function runMatch() {
     errEl.textContent = "Match failed — check the backend and try again.";
     errEl.classList.add("show");
     $("pctVal").textContent = "–";
+    /* never leave skeletons spinning: clear every one of them on failure */
+    ["kvInliers","kvRmse","kvKp1","kvKp2","kvCache","mbSift","mbLearned","mbK","mbFormula"]
+      .forEach(k => { const el = $(k); if (el) el.classList.remove("skel"); });
+    $("cvA").classList.remove("skel"); $("cvB").classList.remove("skel");
+    $("craterTable").classList.remove("skel", "block");
+    $("craterTable").textContent = "No result — fix the backend, then press RUN MATCH.";
   } finally { $("runBtn").disabled = false; }
 }
 
@@ -529,18 +543,43 @@ function renderMatch(m) {
     `loaded (${mb.learned_candidates})` : "not trained — SIFT fallback";
   $("mbK").textContent = m.ransac ? m.ransac.derived_iterations_k : "–";
   $("mbFormula").textContent = m.ransac ? m.ransac.formula : "–";
+  /* the reference is always selected automatically by the pipeline — show
+     the judges WHICH reference was picked for this scene */
+  const refSrc = (m.metadata && (m.metadata.reference_source ||
+                  m.metadata.provenance)) || "";
+  $("refCap").textContent = "REFERENCE · " +
+    (refSrc.indexOf("LROC") !== -1 ? "REAL LROC NAC — AUTO-SELECTED"
+                                   : "AUTO-GENERATED SECOND PASS");
   drawOverlays(m);
 }
 
 async function drawOverlays(m) {
   const load = src => new Promise((res, rej) => {
-    const im = new Image(); im.onload = () => res(im); im.onerror = rej;
+    const im = new Image(); im.onload = () => res(im);
+    im.onerror = () => rej(new Error("image load failed: " + src));
     im.src = (window.API_BASE || "") + src;
   });
-  const [imA, imB] = await Promise.all([load(m.source_image), load(m.reference_image)]);
+  let imA = null, imB = null;
+  try {
+    [imA, imB] = await Promise.all([load(m.source_image), load(m.reference_image)]);
+  } catch (e) { console.warn("overlay image:", e.message); }
   for (const [cv, im] of [[$("cvA"), imA], [$("cvB"), imB]]) {
-    cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
-    cv.classList.remove("skel");
+    cv.classList.remove("skel");   /* clear the skeleton no matter what */
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (im) {
+      ctx.drawImage(im, 0, 0, cv.width, cv.height);
+    } else {
+      ctx.fillStyle = "rgba(255,255,255,.4)"; ctx.font = "13px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("image unavailable — backend /static not reachable",
+                   cv.width / 2, cv.height / 2);
+    }
+  }
+  if (!imA || !imB) {
+    $("craterTable").classList.remove("skel", "block");
+    $("craterTable").textContent = "Crater table unavailable (overlay images failed to load).";
+    return;
   }
   const s = $("cvA").width / 1024;
   const ctxA = $("cvA").getContext("2d"), ctxB = $("cvB").getContext("2d");
@@ -594,6 +633,7 @@ $("runBtn").addEventListener("click", runMatch);
 window.__runMatch = runMatch;
 window.__checkHealth = checkHealth;
 window.__loadScenes = loadScenes;
+window.__resetMatchCache = () => { _cacheMatch = null; };
 </script>
 <script type="module">
 const $ = id => document.getElementById(id);
@@ -609,9 +649,57 @@ dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("ove
 dz.addEventListener("dragleave", () => dz.classList.remove("over"));
 dz.addEventListener("drop", e => {
   e.preventDefault(); dz.classList.remove("over");
-  if (e.dataTransfer.files[0]) analyze(e.dataTransfer.files[0]);
+  const files = [...e.dataTransfer.files];
+  if (files.length) routeUpload(files);
 });
-fi.addEventListener("change", () => { if (fi.files[0]) analyze(fi.files[0]); });
+fi.addEventListener("change", () => { if (fi.files.length) routeUpload([...fi.files]); });
+/* plain image -> /analyze_upload (SFS); PDS4/PDS3 product (.xml+.img pair
+   or .zip of the product dir) -> /ingest_product_upload (full scene with
+   auto-selected reference from the LRO NAC library) */
+const isProduct = f => /\.(zip|img|xml)$/i.test(f.name || "");
+function routeUpload(files) {
+  if (files.some(isProduct)) analyzeProduct(files); else analyze(files[0]);
+}
+
+async function analyzeProduct(files) {
+  $("upCanvas").getContext("2d").clearRect(0, 0, 560, 560);
+  $("upCanvas2").classList.add("skel");
+  $("uploadKv").innerHTML =
+    "<span>ingesting mission product</span><span class='skel' style='min-height:12px'></span>" +
+    "<span>(PDS4 / PDS3 label + image → SFS DEM → reference auto-select)</span><span>…</span>";
+  $("viewIn3dBtn").disabled = true;
+  $("sceneBtn").disabled = true;
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f, f.name);
+  fd.append("scene_name", (files[0].name || "product")
+    .replace(/\.[^.]+$/, "").replace(/_d_img_d18$/i, ""));
+  try {
+    const r = await fetch(API + "/ingest_product_upload", { method: "POST", body: fd });
+    if (!r.ok) throw new Error(await r.text());
+    const j = await r.json();
+    lastPayload = j.terrain;
+    lastFile = null;                       // scene already exists; no re-create
+    renderHillshade(lastPayload);
+    const g = lastPayload.grid, meta = lastPayload.metadata || {};
+    $("uploadKv").innerHTML =
+      `<span>scene</span><span>${j.created_scene}</span>` +
+      `<span>relief range</span><span>${g.zmin_m.toFixed(1)} – ${g.zmax_m.toFixed(1)} m</span>` +
+      `<span>grid</span><span>${g.n}×${g.n} · cell ≈ ${g.cell_meters} m</span>` +
+      `<span>craters detected</span><span>${(j.craters || []).length}</span>` +
+      `<span>reference</span><span>${(meta.reference_source || "auto-selected").slice(0, 60)}</span>`;
+    $("viewIn3dBtn").disabled = false;
+    $("uploadNote").textContent = "Scene '" + j.created_scene +
+      "' created from the mission product — reference auto-selected. " +
+      "Open 01 MATCH for the full pipeline.";
+    await window.__loadScenes();
+    const sel = $("sceneSel");
+    sel.value = j.created_scene;
+    sel.dispatchEvent(new Event("change"));
+  } catch (e) {
+    $("uploadKv").innerHTML = `<span>error</span><span>${String(e).slice(0, 120)}</span>`;
+    $("upCanvas2").classList.remove("skel");
+  }
+}
 /* auto-fit sun geometry from scene/dataset metadata (mission sun-parameter
    file drives the physics, sliders only override it) */
 let sunTouched = false;
@@ -833,8 +921,15 @@ function buildTerrain(payload) {
 
 async function loadTerrain(id) {
   overlay.style.display = 'flex';
-  const payload = await (await fetch((window.API_BASE || "") + '/terrain/' + id)).json();
-  buildTerrain(payload);
+  overlay.textContent = 'BUILDING TERRAIN MESH…';
+  try {
+    const res = await fetch((window.API_BASE || "") + '/terrain/' + id);
+    if (!res.ok) throw new Error('server responded ' + res.status);
+    buildTerrain(await res.json());
+  } catch (e) {
+    /* never leave the overlay stuck: report and keep the note visible */
+    overlay.textContent = 'TERRAIN UNAVAILABLE — ' + e.message;
+  }
 }
 
 function resize() {
@@ -858,4 +953,4 @@ window.__buildTerrain = buildTerrain;
 </script>
 </body>
 </html>
-</html>
+

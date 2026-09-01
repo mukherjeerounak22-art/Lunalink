@@ -296,6 +296,91 @@ def ingest_product(path: str, scene_id: str = None,
     return res
 
 
+def _terrain_payload(scene_id, dem, cell_m, meta, cache="fresh"):
+    """Shared Stage-7 payload: truncated-Fourier smoothed grid + marching
+    squares contours - exactly what the 3D hologram consumes."""
+    smooth = pipeline.fourier_smooth(dem, keep_fraction=0.18)
+    g = cv2.resize(smooth, (GRID_N, GRID_N),
+                   interpolation=cv2.INTER_AREA).astype(float)
+    g -= g.min()
+    zmin, zmax = float(g.min()), float(g.max())
+    levels = [zmin + (zmax - zmin) * (i + 1) / (CONTOUR_LEVELS + 1)
+              for i in range(CONTOUR_LEVELS)]
+    return {
+        "scene_id": scene_id,
+        "grid": {"n": GRID_N, "cell_meters": float(cell_m),
+                 "extent_m": float(GRID_N * cell_m),
+                 "heights_m": [[round(float(v), 3) for v in row] for row in g],
+                 "zmin_m": zmin, "zmax_m": zmax},
+        "contours": {"levels_m": levels,
+                     "segments": [pipeline.marching_squares(g, lv)
+                                  for lv in levels]},
+        "metadata": meta,
+        "cache": cache,
+    }
+
+
+@app.post("/ingest_product_upload")
+async def ingest_product_upload(
+    files: list[UploadFile] = File(...),
+    scene_name: str = Form(""),
+    crop_size: int = Form(4096),
+    sun_az: float = Form(270.8),
+    sun_el: float = Form(10.0),
+):
+    """Upload a real mission product DIRECTLY - an ISRO PDS4 XML+IMG pair,
+    a NASA PDS3 .XML+.IMG pair, or a ZIP of the product directory - and get
+    a full matchable scene (SFS DEM, craters, auto-selected reference,
+    terrain payload). Plain images use /analyze_upload instead."""
+    import io
+    import zipfile
+    import tempfile
+    if not files:
+        raise HTTPException(400, "no files uploaded")
+    names = [f.filename or "" for f in files]
+    product_exts = (".zip", ".img", ".xml")
+    if not any(n.lower().endswith(product_exts) for n in names):
+        raise HTTPException(400, "expected a PDS4/PDS3 product (.xml + .img "
+                                 "pair, or a .zip of the product directory)")
+    tmp = tempfile.mkdtemp(prefix="sih_product_")
+    try:
+        if len(files) == 1 and names[0].lower().endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(await files[0].read())) as z:
+                z.extractall(tmp)
+        else:
+            for f in files:
+                dest = os.path.join(tmp, os.path.basename(f.filename
+                                                          or "unnamed"))
+                with open(dest, "wb") as out:
+                    out.write(await f.read())
+        sid_base = scene_name or os.path.splitext(names[0])[0]
+        sid = re.sub(r"[^A-Za-z0-9_-]", "_", sid_base)[:48]
+        sid = "up_prod_%s_%d" % (sid, int(time.time()) % 100000)
+        res = ingest.ingest_product_dir(tmp, scene_id=sid,
+                                        crop_size=crop_size, sun_az=sun_az,
+                                        sun_el=sun_el)
+        global _registry
+        _registry = ingest.load_registry()
+        d = res["entry"]["dir"]
+        dem = np.load(os.path.join(d, "dem.npy"))
+        meta = json.load(open(os.path.join(d, "metadata.json")))
+        integrations.breadcrumb("product uploaded", data={
+            "scene": res["scene_id"], "files": names})
+        return {
+            "created_scene": res["scene_id"],
+            "terrain": _terrain_payload(res["scene_id"], dem,
+                                        meta.get("analysis_grid", {})
+                                        .get("cell_meters", 1.0), meta),
+            "label": res.get("label", {}),
+            "craters": res.get("craters", []),
+        }
+    except FileNotFoundError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:                                   # noqa: BLE001
+        integrations.capture_exception(exc)
+        raise HTTPException(500, "product ingestion failed: %s" % exc)
+
+
 @app.post("/analyze_upload")
 async def analyze_upload(
     file: UploadFile = File(...),
@@ -319,7 +404,7 @@ async def analyze_upload(
         img = PILImage.open(io.BytesIO(data)).convert("L")
     except Exception:
         raise HTTPException(400, "could not decode image")
-    img = np.asarray(img.resize((512, 512), PILImage.LANCZOS),
+    img = np.asarray(img.resize((1024, 1024), PILImage.LANCZOS),
                      dtype=np.float32)
 
     dem = shape_from_shading(img, sun_az, sun_el, cell_m=1.0)
