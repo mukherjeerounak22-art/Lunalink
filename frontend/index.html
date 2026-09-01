@@ -643,13 +643,25 @@ function renderMatch(m) {
 }
 
 async function drawOverlays(m) {
-  const load = src => new Promise((res, rej) => {
-    const im = new Image(); im.onload = () => res(im);
-    im.onerror = () => rej(new Error("image load failed: " + src));
-    /* hard timeout so the canvas skeleton can never hang forever */
-    setTimeout(() => rej(new Error("image load timed out: " + src)), 30000);
+  /* load with retries: a hotspot blip or a slow tunnel moment must not
+     permanently stick "image unavailable" on the canvases */
+  const loadOnce = (src, ms) => new Promise((res, rej) => {
+    const im = new Image();
+    const t = setTimeout(() => { im.src = ""; rej(new Error("timeout: " + src)); }, ms);
+    im.onload = () => { clearTimeout(t); res(im); };
+    im.onerror = () => { clearTimeout(t); rej(new Error("image load failed: " + src)); };
     im.src = (window.API_BASE || "") + src;
   });
+  const load = async src => {
+    const attempts = [20000, 20000, 20000];  // 3 tries, 20 s each, spaced
+    const gaps = [0, 2000, 5000];
+    let lastErr = null;
+    for (let i = 0; i < attempts.length; i++) {
+      if (gaps[i]) await new Promise(r => setTimeout(r, gaps[i]));
+      try { return await loadOnce(src, attempts[i]); } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error("image load failed: " + src);
+  };
   let imA = null, imB = null;
   try {
     [imA, imB] = await Promise.all([load(m.source_image), load(m.reference_image)]);
@@ -705,22 +717,33 @@ async function narrate() {
   if (!id) return;
   const out = $("narrateOut");
   out.classList.add("skel", "block");
-  try {
-    const r = await fetchT(API + "/narrate/" + id, null, 90000);
-    if (r.status === 429) {
-      out.textContent = "Rate limited — the sliding-window limiter is working as designed.";
-      return;
-    }
-    const j = await r.json();
-    const labelled = (j.source === "gemini" ? "[Gemini] " : "[local template] ") + j.narration;
-    out.textContent = labelled;
-    /* mirror into the 01 MATCH window so judges see it where they are */
-    const n1 = $("narration");
-    if (n1) n1.textContent = labelled;
-    $("narrateMeta").textContent = j.metrics_summary;
-  } catch (e) {
-    out.textContent = "Narration unavailable — " + e.message;
-  } finally { out.classList.remove("skel", "block"); }
+  let j = null, lastErr = null;
+  /* one automatic retry — a hotspot blip shouldn't kill the narration */
+  for (let attempt = 0; attempt < 2 && !j; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, 3000));
+    try {
+      const r = await fetchT(API + "/narrate/" + id, null, 90000);
+      if (r.status === 429) {
+        out.textContent = "Rate limited — the sliding-window limiter is working as designed.";
+        out.classList.remove("skel", "block");
+        return;
+      }
+      j = await r.json();
+    } catch (e) { lastErr = e; }
+  }
+  if (!j) {
+    out.textContent = "Narration unavailable — " + (lastErr ? lastErr.message :
+      "unknown error") + " — click NARRATE again once the status badge is green.";
+    out.classList.remove("skel", "block");
+    return;
+  }
+  const labelled = (j.source === "gemini" ? "[Gemini] " : "[local template] ") + j.narration;
+  out.textContent = labelled;
+  /* mirror into the 01 MATCH window so judges see it where they are */
+  const n1 = $("narration");
+  if (n1) n1.textContent = labelled;
+  $("narrateMeta").textContent = j.metrics_summary;
+  out.classList.remove("skel", "block");
 }
 
 /* voice narration — Web Speech API (offline, no API key, judge-friendly) */
