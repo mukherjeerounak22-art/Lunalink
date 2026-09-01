@@ -3,7 +3,7 @@
     "dir": "C:\\Users\\user\\Downloads\\SIH\\data\\processed\\demo_tmc",
     "slug": "demo_tmc",
     "name": "Level 1 - CH-2 TMC demo product",
-    "subtitle": "Level 1 - warm-up: simulated second-pass reference (same-sensor, easy)",
+    "subtitle": "warm-up: simulated second-pass reference (same-sensor, easy)",
     "kind": "user"
   }
 }
