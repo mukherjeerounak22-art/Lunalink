@@ -30,8 +30,12 @@ Optional keys (all graceful no-ops without them) live in `backend/.env`
 
 ## Demo assets — `data/demo_upload/` (committed to the repo)
 
-The curated test-image set lives in the repo (gitignore exception), so a
-fresh clone is demo-ready:
+Full path on the demo laptop: `c:\Users\user\Downloads\SIH\data\demo_upload\`
+— open it in File Explorer and drag files into the 03 UPLOAD dropzone.
+If the page ever hangs on `connecting…`, fully restart the browser (it
+cached a failed DNS lookup) and reopen — all requests hard-time-out into a
+retry state. The curated test-image set lives in the repo (gitignore
+exception), so a fresh clone is demo-ready:
 
 | File | Use it for |
 |---|---|

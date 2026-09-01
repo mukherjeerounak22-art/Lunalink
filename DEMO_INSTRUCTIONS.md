@@ -60,9 +60,13 @@ Wi-Fi/hotspot. If the venue network is unusable, fall back to setup C:
 
 ## 1 · The demo image folder — `data/demo_upload/`
 
+**Full path on the demo laptop:** `c:\Users\user\Downloads\SIH\data\demo_upload\`
+— open this folder in File Explorer BEFORE judges arrive and keep the
+window next to the browser. Every upload in this playbook is a plain
+drag-and-drop from that window into the 03 UPLOAD dropzone.
+
 This folder is **committed to the repository** (gitignore exception), so a
-fresh `git clone` is demo-ready. During the demo, open File Explorer at this
-folder and drag files straight into the 03 UPLOAD dropzone:
+fresh `git clone` is demo-ready. Contents and when to use each:
 
 | File | When to use it |
 |---|---|
@@ -540,6 +544,7 @@ three demo scenes (`data/processed/ohrc_real`, `tycho_synthetic`,
 
 | Symptom | Meaning / fix |
 |---|---|
+| **Stuck on `connecting…` forever, skeletons never resolve** | Your browser cached a failed DNS lookup (e.g. you opened the page before the tunnel/DNS was ready). Fully **quit and restart the browser** (clears its internal DNS cache), reopen the demo URL. Since the timeout fix, the badge flips to `backend offline — CLICK TO RETRY` within ~12 s instead of hanging — clicking it re-boots. |
 | Red status badge `backend offline — CLICK TO RETRY` on the Vercel page | (1) Tunnel/backend not running → rerun `start_demo_tunnel.ps1`, reopen the `?api=` URL. (2) `window.API_BASE` mis-baked for Render → fix + `vercel --prod`. (3) Backend not deployed → §14 Option B step A. |
 | Badge green but tooltip shows the Vercel origin | You opened the Vercel URL without the `?api=<tunnel>` parameter — use the exact URL printed by `start_demo_tunnel.ps1`. |
 | Tunnel URL expired / changed | Quick tunnels are per-run — rerun the script and open the newly printed `?api=` URL (no Vercel redeploy needed). |
@@ -564,7 +569,10 @@ pipeline, so you can compare. Do it against your actual demo setup
 
 **T1 · Boot & health.** Open the demo URL (Vercel `?api=` link, or local).
 Badge → `backend online · SIFT + learned ONNX descriptor`; hover shows the
-right backend URL. Dropdown lists exactly: `CH-2 OHRC real scene`,
+right backend URL. If the badge hangs on `connecting…` for more than ~15 s,
+fully restart the browser (it cached a failed DNS lookup) and reopen — the
+page never hangs silently anymore: every request times out into a visible
+error/retry state. Dropdown lists exactly: `CH-2 OHRC real scene`,
 `Tycho (synthetic stand-in)`, `demo_tmc`. The default scene's match
 auto-runs.
 

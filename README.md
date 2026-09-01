@@ -277,6 +277,10 @@ pip install fastapi uvicorn numpy opencv-python scipy pillow onnxruntime torch h
 ```
 Frontend needs internet once (Three.js CDN via import map).
 
+- **Stuck on `connecting…` forever** → quit and restart the browser (clears
+  its cached failed DNS), reopen the demo URL. The app now hard-times-out
+  every request (health 12 s, uploads 180 s) so the UI always shows an
+  error/retry state instead of hanging.
 - **Status badge red on the Vercel page** → backend asleep (hit `/health`,
   wait ~50 s), or `window.API_BASE` in `frontend/config.js` doesn't point
   at the Render backend — fix and `vercel --prod`. Full deployment setup:

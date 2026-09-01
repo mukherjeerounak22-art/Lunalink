@@ -164,11 +164,14 @@ Two pieces, one wire:
 ## Part 2 — Exhaustive system walkthrough (what happens, step by step)
 
 **① Site opens** → uvicorn serves `frontend/index.html` (`GET /`) →
-`config.js` (API_BASE, Sentry DSN) → Sentry browser SDK inits → import map
-loads Three.js 0.160 → `GET /health` turns the badge green and reports
-"SIFT + learned ONNX descriptor" → `GET /craters` fills the scene dropdown
-(each entry = the scene's `metadata.json`: product ID, sun angles,
-footprint lat/lons, DEM range) → auto-runs the match on the default scene.
+`config.js` (API_BASE — bake it in or pass `?api=`, Sentry DSN, and the
+global `fetchT` hard-timeout wrapper every request uses) → Sentry browser
+SDK inits → import map loads Three.js 0.160 → `GET /health` turns the badge
+green and reports "SIFT + learned ONNX descriptor" → `GET /craters` fills
+the scene dropdown (each entry = the scene's `metadata.json`: product ID,
+sun angles, footprint lat/lons, DEM range) → auto-runs the match on the
+default scene. No request can hang silently: each stage times out into a
+visible error/retry state.
 
 **② MATCH — `GET /match/{scene_id}`** → cache-aside: in-memory dict →
 Upstash Redis `GET match:{id}` → else fresh compute: load `source.png` +
