@@ -522,6 +522,11 @@ async function loadScenes() {
   renderSceneMeta();
 }
 window.__currentScene = () => $("sceneSel").value;
+/* export to the boot sequence + other modules — these functions live in
+   THIS module's scope, so the assignment must happen here (a sibling
+   module cannot reach them and would throw a ReferenceError at load) */
+window.__checkHealth = checkHealth;
+window.__loadScenes = loadScenes;
 
 function kvHtml(entries) {
   return entries.map(([k, v]) => `<span>${k}</span><span>${v ?? "–"}</span>`).join("");
@@ -708,8 +713,9 @@ $("narrateBtn").addEventListener("click", narrate);
 $("narrateBtn2").addEventListener("click", narrate);
 $("runBtn").addEventListener("click", runMatch);
 window.__runMatch = runMatch;
-window.__checkHealth = checkHealth;
-window.__loadScenes = loadScenes;
+/* NOTE: window.__checkHealth / window.__loadScenes are assigned in the
+   scenes module above — they are defined THERE; reassigning them here
+   would throw a cross-module ReferenceError and kill this whole script */
 window.__resetMatchCache = () => { _cacheMatch = null; };
 </script>
 <script type="module">
@@ -1027,18 +1033,38 @@ new ResizeObserver(resize).observe(host); resize();
 window.__loadTerrain = loadTerrain;
 window.__buildTerrain = buildTerrain;
 </script>
-<script>
+<script type="module">
 /* Resilient boot: NEVER aborts on a failed health check. The backend may
    have been started after the page (or be momentarily restarting) — retry
    with backoff, always attempt the scene list, and let the red status
-   badge act as a manual retry button. Nothing stays stuck on "loading…". */
+   badge act as a manual retry button. Nothing stays stuck on "loading…".
+   MUST be type="module": classic inline scripts execute at parse time,
+   BEFORE deferred modules wire window.__checkHealth etc., which crashed
+   the whole boot (stuck "connecting…" forever). */
 window.__boot = async function boot(attempt) {
   attempt = attempt || 1;
-  const ok = await window.__checkHealth();
-  await window.__loadScenes();          /* even if health failed — try anyway */
-  if (window.__currentScene()) await window.__runMatch();
-  if (!ok && attempt < 5) {
-    setTimeout(() => window.__boot(attempt + 1), 2000 * attempt);
+  /* guard: if the wiring modules have not run yet, wait — never die silently */
+  if (typeof window.__checkHealth !== "function" ||
+      typeof window.__loadScenes !== "function") {
+    if (attempt < 10) { setTimeout(() => window.__boot(attempt + 1), 300); }
+    else {
+      const el = document.getElementById("status");
+      el.textContent = "page init failed — hard refresh (Ctrl+F5)";
+      el.className = "bad";
+    }
+    return;
+  }
+  try {
+    const ok = await window.__checkHealth();
+    await window.__loadScenes();          /* even if health failed — try anyway */
+    if (window.__currentScene()) await window.__runMatch();
+    if (!ok && attempt < 5) {
+      setTimeout(() => window.__boot(attempt + 1), 2000 * attempt);
+    }
+  } catch (e) {
+    /* an exception here must never kill the retry loop silently */
+    console.warn("boot attempt " + attempt + " failed:", e);
+    if (attempt < 5) setTimeout(() => window.__boot(attempt + 1), 2000 * attempt);
   }
 };
 document.getElementById("status").addEventListener("click",
