@@ -60,7 +60,8 @@
     padding:5px 12px; border:1px solid var(--edge-hi); border-radius:999px;
     background:#0d0d0d; color:var(--dim); }
   #status.ok { color:var(--ok); border-color:rgba(184,224,204,.4); }
-  #status.bad { color:var(--bad); border-color:rgba(227,166,160,.4); border-style:dashed; }
+  #status.bad { color:var(--bad); border-color:rgba(227,166,160,.4);
+    border-style:dashed; cursor:pointer; text-decoration:underline dotted; }
 </style>
 <style>
   /* ==== tab bar: multi-window switch ==== */
@@ -353,6 +354,7 @@ if (window.SENTRY_DSN_FRONTEND) {
         </div>
         <div class="note">Bright slopes facing the assumed sun azimuth become ridges.
         Tip: match the azimuth to the shadow direction in your image for best relief.</div>
+        <div class="mono-line" id="sunMode" style="margin-top:8px">AUTO · fits itself from the selected scene's mission metadata</div>
       </div>
     </div>
 
@@ -414,12 +416,15 @@ window.__showTab = showTab;
 async function checkHealth() {
   const el = $("status");
   try {
-    const j = await (await fetch(API + "/health")).json();
+    const j = await (await fetch(API + "/health", { cache: "no-store" })).json();
     el.textContent = "backend online · " + j.pipeline;
     el.className = "ok";
     return true;
   } catch (e) {
-    el.textContent = "backend offline — uvicorn main:app --port 8000";
+    el.textContent = "backend offline — CLICK TO RETRY · uvicorn main:app --port 8000";
+    el.title = "Tried " + (API || location.origin) +
+      "/health — if you opened this file outside the backend (Live Server, " +
+      "file://, Vercel), set window.API_BASE in frontend/config.js first.";
     el.className = "bad";
     return false;
   }
@@ -430,14 +435,21 @@ let scenes = [];
 async function loadScenes() {
   const sel = $("sceneSel"), errEl = $("sceneError");
   try {
-    const res = await fetch(API + "/craters");
+    const res = await fetch(API + "/craters", { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
     scenes = await res.json();
   } catch (e) {
-    errEl.textContent = "Couldn't load scenes — check the backend, then retry.";
+    /* never leave the dropdown stuck on "loading…" — say so and allow retry */
+    sel.innerHTML = "";
+    const o = document.createElement("option");
+    o.textContent = "— scenes unavailable (backend offline) —";
+    o.disabled = true; o.selected = true;
+    sel.appendChild(o);
+    errEl.textContent = "Couldn't load scenes — start the backend, then click the red status badge (top right) to retry.";
     errEl.classList.add("show");
     return;
   }
+  errEl.classList.remove("show"); errEl.textContent = "";
   sel.innerHTML = "";
   scenes.forEach(s => {
     const o = document.createElement("option");
@@ -709,16 +721,23 @@ window.__setSun = (az, el) => {
   $("elRange").value = Math.round(el);
   $("azOut").value = Math.round(az) + "°";
   $("elOut").value = Math.round(el) + "°";
+  const sm = $("sunMode");
+  if (sm) sm.textContent = "AUTO · fitted from scene mission metadata — az " +
+    Math.round(az) + "° / el " + Math.round(el) + "° (drag a slider to override)";
 };
 
 $("azRange").addEventListener("input", () => {
   sunTouched = true;
   $("azOut").value = $("azRange").value + "°";
+  const sm = $("sunMode");
+  if (sm) sm.textContent = "MANUAL override — auto-fit disabled until page reload";
   if (lastPayload) renderHillshade(lastPayload);
 });
 $("elRange").addEventListener("input", () => {
   sunTouched = true;
   $("elOut").value = $("elRange").value + "°";
+  const sm = $("sunMode");
+  if (sm) sm.textContent = "MANUAL override — auto-fit disabled until page reload";
   if (lastPayload) renderHillshade(lastPayload);
 });
 
@@ -944,12 +963,22 @@ window.__loadTerrain = loadTerrain;
 window.__buildTerrain = buildTerrain;
 </script>
 <script>
-(async () => {
+/* Resilient boot: NEVER aborts on a failed health check. The backend may
+   have been started after the page (or be momentarily restarting) — retry
+   with backoff, always attempt the scene list, and let the red status
+   badge act as a manual retry button. Nothing stays stuck on "loading…". */
+window.__boot = async function boot(attempt) {
+  attempt = attempt || 1;
   const ok = await window.__checkHealth();
-  if (!ok) return;
-  await window.__loadScenes();
-  window.__runMatch();
-})();
+  await window.__loadScenes();          /* even if health failed — try anyway */
+  if (window.__currentScene()) await window.__runMatch();
+  if (!ok && attempt < 5) {
+    setTimeout(() => window.__boot(attempt + 1), 2000 * attempt);
+  }
+};
+document.getElementById("status").addEventListener("click",
+  () => window.__boot(1));
+window.__boot();
 </script>
 </body>
 </html>
