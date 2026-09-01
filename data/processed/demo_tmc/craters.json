@@ -1,0 +1,22 @@
+[
+  {
+    "x_px": 562.2,
+    "y_px": 702.6,
+    "radius_px": 82.6,
+    "radius_m": 82.6,
+    "lon_deg": 25.15374,
+    "lat_deg": -13.08365,
+    "shadow_len_m": 50.0,
+    "depth_est_m": 13.4
+  },
+  {
+    "x_px": 173.4,
+    "y_px": 329.4,
+    "radius_px": 76.0,
+    "radius_m": 76.0,
+    "lon_deg": 25.13966,
+    "lat_deg": -13.07022,
+    "shadow_len_m": 42.0,
+    "depth_est_m": 11.3
+  }
+]

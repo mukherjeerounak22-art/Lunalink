@@ -1,12 +1,22 @@
 # ---- data (1 GB+ scenes, model weights - regeneratable) ----
 # everything under data/ is regeneratable EXCEPT the curated demo upload
-# set (data/demo_upload/) which is committed so every teammate + the demo
-# machine gets the exact same test images.
+# set (data/demo_upload/) and the three baked demo scenes + registry, which
+# are committed so a fresh Render/Vercel clone is demo-ready.
 data/*
 !data/demo_upload/
 !data/demo_upload/**
+!data/processed/
+data/processed/*
+!data/processed/ohrc_real/
+!data/processed/ohrc_real/**
+!data/processed/tycho_synthetic/
+!data/processed/tycho_synthetic/**
+!data/processed/demo_tmc/
+!data/processed/demo_tmc/**
+!data/processed/registry.json
 backend/models/*.onnx
 *.onnx
+!backend/models/descriptor.onnx
 Unconfirmed*.crdownload
 *.zip
 !data/demo_upload/product_pds4_demo.zip

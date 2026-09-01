@@ -1,0 +1,20 @@
+# Render.com Blueprint — deploys the SIH26166 backend with zero dashboard
+# clicking: render.com → New → Blueprint → point at this repo → Apply.
+# The 3 demo scenes (data/processed/ohrc_real, tycho_synthetic, demo_tmc)
+# and backend/models/descriptor.onnx are committed, so this boots complete:
+# /health must report learned_model_loaded: true.
+services:
+  - type: web
+    name: sih26166-backend
+    runtime: python
+    plan: free            # free tier spins down after ~15 min idle — pre-warm before demoing (see DEMO_INSTRUCTIONS.md §14)
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      # optional integrations — set these in the Render dashboard, never in git:
+      # GOOGLE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+      # UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, SENTRY_DSN_BACKEND

@@ -1,0 +1,23 @@
+{
+  "product_id": "ch2_tmc_demo_d_img_d18.img",
+  "instrument": "Dynamically ingested product",
+  "mission": "SIH26166 dynamic ingestion",
+  "band": "grayscale (as provided)",
+  "start_time_utc": null,
+  "sun": {
+    "sun_azimuth_deg": 250.0,
+    "sun_elevation_deg": 15.0,
+    "solar_incidence_deg": 75.0
+  },
+  "analysis_grid": {
+    "n": 1024,
+    "cell_meters": 1.0
+  },
+  "dem_range_m": [
+    0.0,
+    42.472129821777344
+  ],
+  "provenance": "Dynamically ingested PDS4 product ch2_tmc_demo_d_img_d18.img; crop origin (line 0, sample 0), 4096 px window. Relief is a photometric approximation (non-metric).",
+  "gsd_note": "GSD taken from label/assumption; see metadata",
+  "craters_detected": 2
+}

@@ -1,13 +1,20 @@
-"""End-to-end sanity check for SIH26166 (run against a live localhost:8000)."""
+"""End-to-end sanity check for SIH26166 (run against a live localhost:8000).
+
+Usage: python _sanity_check.py [BASE_URL]
+       default BASE_URL = http://127.0.0.1:8000 — pass your deployed
+       backend URL (e.g. https://sih26166-backend.onrender.com) to audit
+       the Render deployment from anywhere.
+"""
 import io
 import json
 import os
+import sys
 import time
 import zipfile
 
 import httpx
 
-BASE = "http://127.0.0.1:8000"
+BASE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
 

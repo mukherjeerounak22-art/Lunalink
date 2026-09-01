@@ -1,7 +1,11 @@
 // SIH26166 frontend configuration.
-// Empty = same origin (localhost demo: uvicorn serves frontend + API).
-// After deploying: set this to your backend's public URL, e.g.
+//
+// ⚠️ VERCEL DEMO: this MUST hold your backend's public URL before you
+// `vercel --prod`, or the page will show "backend offline". Deploy the
+// backend with render.yaml (see DEMO_INSTRUCTIONS.md §14), then e.g.:
 //   window.API_BASE = "https://sih26166-backend.onrender.com";
+// Empty string = same origin (correct ONLY for the localhost demo, where
+// uvicorn serves both the frontend and the API on :8000).
 window.API_BASE = "";
 
 // Sentry browser project (per Modern Web + AI Stack Guide §8: the browser DSN

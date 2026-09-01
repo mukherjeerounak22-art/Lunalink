@@ -2,7 +2,17 @@
 
 How to run, what to upload, and the 60-second judge demo.
 
-## Run it
+## Run it — two ways
+
+**Primary (demo day): the Vercel link.**
+The Vercel deployment is the frontend; it talks to the backend deployed on
+Render (free tier) via `frontend/config.js:window.API_BASE`. One-time
+setup (~20 min, Blueprint `render.yaml` included) is in
+[`DEMO_INSTRUCTIONS.md` §14](DEMO_INSTRUCTIONS.md). Pre-warm the backend
+(`https://<backend>.onrender.com/health` in a tab) ~5 min before demoing —
+the free tier sleeps after ~15 min idle.
+
+**Fallback (works fully offline): run everything locally.**
 
 ```bash
 cd backend
@@ -32,7 +42,8 @@ fresh clone is demo-ready:
 
 ## 60-second demo flow
 
-1. Open `http://127.0.0.1:8000` → health badge turns green.
+1. Open the **Vercel link** (backend pre-warmed — see `DEMO_INSTRUCTIONS.md`
+   §0/§14) → health badge turns green. Local fallback: `http://127.0.0.1:8000`.
 2. **01 MATCH** — scene *CH-2 OHRC real scene* → RUN MATCH → keypoints,
    homography, derived RANSAC budget, match % (the honest cross-mission
    number vs the auto-selected NASA reference), Fourier-Mellin row.
@@ -47,12 +58,14 @@ fresh clone is demo-ready:
 ## Pre-demo sanity check
 
 ```bash
-python _sanity_check.py    # against a running backend on :8000
+python _sanity_check.py                        # against a running localhost:8000
+python _sanity_check.py https://<backend>.onrender.com   # against the Render deployment
 ```
 
-Covers: health + ONNX load, image upload → scene → match → terrain →
-narration, PDS4 pair + ZIP product uploads, registry and frontend checks.
-Test scenes are auto-removable from `data/processed/registry.json`.
+(Also available against the deployed backend — pass its URL as the first
+argument.) Covers: health + ONNX load, image upload → scene → match →
+terrain → narration, PDS4 pair + ZIP product uploads, registry and frontend
+checks. Test scenes are auto-removable from `data/processed/registry.json`.
 
 See `PRESENTATION_GUIDE.md` for the full architecture walkthrough,
 the ONNX training story, and the mathematical formulation.

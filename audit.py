@@ -4,11 +4,13 @@ Keys are read from backend/.env - never hard-coded."""
 import json
 import os
 import re
+import sys
 import urllib.request
 
 import httpx
 
-BASE = "http://localhost:8000"
+# optional argv[1] = deployed backend URL (e.g. https://...onrender.com)
+BASE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://localhost:8000"
 
 # load backend/.env
 _env = {}

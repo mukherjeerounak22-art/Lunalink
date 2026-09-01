@@ -47,10 +47,23 @@ FastAPI (uvicorn, single process serves API + frontend)
    └─ integrations.py  Supabase · Upstash Redis · Sentry · Gemini (all optional)
 Data on disk: data/raw (PRADAN products) · data/reference/lro_nac (8 NASA
 strips) · data/processed/<scene>/ (source.png, reference.png, dem.npy,
-craters.json, metadata.json) · data/processed/registry.json
+craters.json, metadata.json) · data/processed/registry.json.
+Committed subsets (fresh clones are demo-ready): the three demo scenes
+under data/processed/, registry.json, data/demo_upload/, and
+backend/models/descriptor.onnx — the 1 GB raw products and 3.8 GB LRO
+library stay local.
 ```
 
 ## Run
+
+**Demo day: the Vercel link.** The frontend is deployed on Vercel; the
+backend runs on Render (free tier) from the included `render.yaml`
+Blueprint, and the two are wired by one variable,
+`frontend/config.js:window.API_BASE`. Full one-time setup:
+[`DEMO_INSTRUCTIONS.md` §14](DEMO_INSTRUCTIONS.md). Pre-warm the backend
+(open `<backend>/health` in a tab) — the free tier sleeps after ~15 min idle.
+
+**Local (offline fallback / development):**
 
 ```bash
 cd backend
@@ -58,6 +71,11 @@ python preprocess.py              # one-time: 1 GB .img → DEM + match pair
 python -m uvicorn main:app --port 8000
 # open http://localhost:8000  (backend serves the frontend too)
 ```
+
+The three demo scenes (`data/processed/{ohrc_real,tycho_synthetic,demo_tmc}`),
+their `registry.json`, the demo upload set (`data/demo_upload/`), and the
+trained `backend/models/descriptor.onnx` are all committed — a fresh clone
+is demo-ready without the 1 GB raw products.
 
 Retrain the descriptor: `python backend/train_descriptor.py` (CPU, minutes).
 Optional keys in `backend/.env` (see `.env.example`): Supabase, Upstash,
@@ -240,8 +258,10 @@ backend/integrations.py    Supabase / Upstash / Sentry / Gemini (optional)
 backend/train_descriptor.py  ONNX descriptor training + export + verification
 backend/models/descriptor.onnx   the trained artifact (gitignored)
 supabase/schema.sql        tables + RLS policies
-audit.py / _sanity_check.py  end-to-end verification scripts
-data/demo_upload/          demo test images (local)
+render.yaml                Render Blueprint — one-click backend deploy
+audit.py / _sanity_check.py  end-to-end verification scripts (accept a
+                             deployed backend URL as argv[1])
+data/demo_upload/          demo test images (committed)
 ```
 
 ## Requirements & troubleshooting
@@ -251,10 +271,17 @@ pip install fastapi uvicorn numpy opencv-python scipy pillow onnxruntime torch h
 ```
 Frontend needs internet once (Three.js CDN via import map).
 
-- **Status badge red / dropdown says offline** → start uvicorn
+- **Status badge red on the Vercel page** → backend asleep (hit `/health`,
+  wait ~50 s), or `window.API_BASE` in `frontend/config.js` doesn't point
+  at the Render backend — fix and `vercel --prod`. Full deployment setup:
+  [`DEMO_INSTRUCTIONS.md` §14](DEMO_INSTRUCTIONS.md).
+- **Status badge red in the local demo** → start uvicorn
   (`python -m uvicorn main:app --port 8000` in `backend/`), then click the
   badge — boot retries automatically. If you host the HTML elsewhere
-  (Live Server, Vercel), set `window.API_BASE` in `frontend/config.js`.
+  (Live Server), set `window.API_BASE` in `frontend/config.js`.
+- **Deployed backend reports `learned_model_loaded: false`** → the ONNX
+  artifact didn't reach the host; it is committed at
+  `backend/models/descriptor.onnx` — check the Render build log.
 - **Narration says local-template** → Gemini quota exhausted; it resets
   daily, and the fallback carries identical numbers.
 - **First match on a scene is slow** → it's the fresh compute + LRO NAC

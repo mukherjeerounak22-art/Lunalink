@@ -89,33 +89,36 @@ git push -u origin main
 ⚠️ Before pushing, check `git status` — you must NOT see `data/`, `.env`, or
 any `.onnx`. If you do, stop and fix `.gitignore` first.
 
-## 6. Vercel (frontend only)
+## 6. Vercel (frontend) + Render (backend) — the deployed demo
 
 The frontend is a static single page — ideal for Vercel. **Do not deploy the
 backend to Vercel**: Python + OpenCV + scene data don't fit serverless cold
-starts (the plan says this explicitly). Host the backend on Render/Railway/VM.
+starts. The backend deploys to Render from the repo's `render.yaml`
+Blueprint, which includes the committed demo scenes and `descriptor.onnx`.
 
 1. (Once) `npm i -g vercel`, then `vercel login`.
 2. From the repo root: `vercel` → **Link to existing project? N** → name
    `sih26166` → keep defaults (the repo-root `vercel.json` sets
    `outputDirectory: frontend`).
-3. Edit `frontend/config.js` →
+3. Deploy the backend: **render.com** → New → **Blueprint** → pick this
+   repo → Apply (reads `render.yaml`). Verify
+   `https://<backend>.onrender.com/health` → `"learned_model_loaded": true`.
+4. Edit `frontend/config.js` →
    `window.API_BASE = "https://<your-backend-host>"` → `vercel --prod`.
-4. Production URL: `https://sih26166.vercel.app`.
+5. Production URL: `https://sih26166.vercel.app`. Pre-warm the backend
+   before demoing — the Render free tier sleeps after ~15 min idle.
+
+Full walkthrough + demo-day caveats (cold start, simulated second-pass
+references for fresh uploads): [`DEMO_INSTRUCTIONS.md` §14](DEMO_INSTRUCTIONS.md).
 
 
-### Backend hosting (Render example — free tier works)
-1. Push to GitHub (section 5). **render.com** → New → **Web Service** →
-   connect the repo.
-2. Runtime: Python 3 · Root dir: `backend` ·
-   Build: `pip install -r requirements.txt` ·
-   Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
-3. Persistent data: the free tier has no disk — either commit only
-   `data/processed/**` (PNGs/NPYs/JSON, a few MB) to the repo, or upload them
-   to the Supabase `dem-patches` bucket and fetch on boot. The 1 GB raw
-   `.img` never leaves your machine.
-4. Dashboard → Environment → paste the same keys as `backend/.env`.
-5. Health check path: `/health`.
+### Backend hosting (Render Blueprint — free tier works)
+`render.yaml` at the repo root encodes everything: **runtime python ·
+rootDir `backend` · build `pip install -r requirements.txt` · start
+`uvicorn main:app --host 0.0.0.0 --port $PORT` · health check `/health`**.
+Optional keys (Gemini, Supabase, Upstash, Sentry) go in the Render
+dashboard → Environment — never in git. The demo scenes and the trained
+model are committed, so no manual data upload is needed.
 
 ## 7. ONNX descriptor integration (after Kaggle training)
 

@@ -1,0 +1,21 @@
+{
+  "product_id": "tycho_synthetic",
+  "instrument": "Synthetic stand-in (Lommel-Seeliger renderer)",
+  "mission": "SIH26166 pipeline self-test",
+  "band": "Synthetic panchromatic",
+  "start_time_utc": null,
+  "target": "Tycho crater stand-in (43.37S, 348.68E)",
+  "analysis_grid": {
+    "n": 1024,
+    "cell_meters": 4.0
+  },
+  "dem_range_m": [
+    -1347.294921875,
+    385.4151611328125
+  ],
+  "provenance": "Synthetic DEM stand-in for Tycho crater (43.37S, 348.68E), Lommel-Seeliger rendered pair. Pipeline is data-source-agnostic - swap in the real PRADAN .img + LROC NAC crop post-hackathon with zero code changes.",
+  "sun": {
+    "sun_azimuth_deg": 20.0,
+    "sun_elevation_deg": 30.0
+  }
+}

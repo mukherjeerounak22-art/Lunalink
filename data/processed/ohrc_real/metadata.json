@@ -1,0 +1,84 @@
+{
+  "product_id": "ch2_ohr_ncp_20210401T2357376656",
+  "instrument": "OHRC (Orbiter High Resolution Camera)",
+  "mission": "Chandrayaan-2",
+  "band": "Panchromatic 500-800 nm",
+  "start_time_utc": "2021-04-01T23:57:37.6656Z",
+  "stop_time_utc": "2021-04-01T23:57:54.4925Z",
+  "processing_level": "Calibrated",
+  "lines": 90148,
+  "samples": 12000,
+  "data_type": "UnsignedByte",
+  "focal_length_mm": 2080.0,
+  "detector_pixel_width_um": 5.2,
+  "line_exposure_duration_ms": 181.74,
+  "tdi_stages": "TDI64",
+  "spacecraft_altitude_km": 104.22328444279451,
+  "pixel_resolution_m": 0.26488811295333897,
+  "orbit_limb_direction": "Descending",
+  "footprint_corners": {
+    "upper_left": {
+      "lat_deg": -13.058433,
+      "lon_deg": 25.133115
+    },
+    "upper_right": {
+      "lat_deg": -13.055345,
+      "lon_deg": 25.245912
+    },
+    "lower_left": {
+      "lat_deg": -13.888916,
+      "lon_deg": 25.128422
+    },
+    "lower_right": {
+      "lat_deg": -13.885844,
+      "lon_deg": 25.241643
+    }
+  },
+  "sun": {
+    "phase_deg": 80.07998744,
+    "sun_aspect_deg": 170.04652601,
+    "sun_azimuth_deg": 270.80209594,
+    "sun_elevation_deg": 9.920012562,
+    "solar_incidence_deg": 80.079987438
+  },
+  "reference_source": "REAL NASA LROC NAC CDR M1249388815LC, registered to the OHRC grid by a RANSAC-verified homography (0 inliers).",
+  "lroc": {
+    "product_id": "M1249388815LC",
+    "inliers": 0,
+    "sift_refined": false,
+    "translation": {
+      "dx": -142,
+      "dy": -128,
+      "ncc": 0.575
+    },
+    "region_full_px": [
+      0,
+      13819,
+      1189,
+      16109
+    ],
+    "start": "2017-05-14T08:12:28.160000Z",
+    "stop": "2017-05-14T08:12:52.585000Z",
+    "scale_note": "NAC CDR (~0.5 m/px) resampled onto the OHRC 1024^2 analysis grid (~1.06 m/px) (template-aligned)"
+  },
+  "cross_mission_consistency": {
+    "method": "independent LROC NAC observation vs OHRC shape-from-shading relief: raw Pearson plus illumination-robust gradient-magnitude correlation",
+    "pearson": 0.21026306037486697,
+    "gradient_corr": -0.03838759996973031,
+    "valid_px": 718842
+  },
+  "craters_detected": 25,
+  "crop_origin_line_sample": [
+    84052,
+    3952
+  ],
+  "analysis_grid": {
+    "n": 1024,
+    "cell_meters": 1.0595524518133559
+  },
+  "dem_range_m": [
+    0.0,
+    91.14424133300781
+  ],
+  "provenance": "Real Chandrayaan-2 OHRC calibrated radiance (source). Relief reconstructed by linearized-Lambertian shape-from-shading (sun vector from the mission sun-parameter file, FFT Poisson integration; radiometric slope calibration at 8 deg RMS) - photometric approximation, NOT a metric DEM. Reference = simulated second-pass product of the same scene (gamma + radiance gradient + noise + rotation/scale homography) standing in for a LROC NAC / second-orbit crop until real reference overlap is pulled. Tycho scene remains the fully synthetic Lommel-Seeliger pair."
+}

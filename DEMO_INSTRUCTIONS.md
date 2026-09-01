@@ -21,25 +21,39 @@ while never letting the AI generate a single number.
 
 ## 0 · Pre-demo checklist (T−30 minutes)
 
-```bash
-cd backend
-python -m uvicorn main:app --port 8000     # ONE command starts everything
-# open http://127.0.0.1:8000
-```
+**You will demo from the Vercel link.** The Vercel deployment is the
+frontend only — it talks to the backend over HTTPS (see §14 to deploy the
+backend on Render with the included `render.yaml`, and to wire
+`frontend/config.js` → `window.API_BASE`). Do this checklist against the
+VERCEL URL, not localhost:
+
+1. **Wake the backend FIRST** (Render free tier spins down after ~15 min
+   idle; the first request after a spin-down takes ~50 s). Open
+   `https://<your-backend>.onrender.com/health` in a browser tab until it
+   returns `{"status":"ok","learned_model_loaded":true,...}`. Keep that tab
+   open — it keeps the service warm.
+2. **Open the Vercel link** — the status badge must turn
+   `backend online · SIFT + learned ONNX descriptor` (green = CORS +
+   `API_BASE` wired correctly). If it stays red: click it (retries with
+   backoff), and check §15.
+
+Then verify against the Vercel page:
 
 | Check | Expected |
 |---|---|
 | Status badge (top right) | `backend online · SIFT + learned ONNX descriptor` |
-| Scene dropdown (01 MATCH) | lists `CH-2 OHRC real scene`, `Tycho (synthetic stand-in)`, plus any user-created scenes |
+| Scene dropdown (01 MATCH) | lists `CH-2 OHRC real scene`, `Tycho (synthetic stand-in)`, `demo_tmc` |
 | First match auto-runs | match ring fills, keypoints overlay on both canvases |
 | 02 TERRAIN | mesh auto-rotates; drag orbits, scroll zooms |
-| 03 UPLOAD → drop `data/demo_upload/ch2_ohrc_real_crop_web.jpg` | relief shading appears in ~5–10 s |
+| 03 UPLOAD → drop `data/demo_upload/ch2_ohrc_real_crop_web.jpg` | relief shading appears in ~5–15 s |
 | 04 NARRATION → click the button | `[Gemini] …` (or `[local template]` if quota is out — say it's a designed fallback, identical numbers) |
-| Backup | screen-record the full demo beforehand; keep `python _sanity_check.py` output as evidence |
+| Backup | screen-record the full demo beforehand; also keep a local `python -m uvicorn main:app --port 8000` fallback running on the demo laptop |
 
-If the machine has no internet: Three.js loads from a CDN and Gemini needs
-network — the rest (matching, terrain, upload, local-template narration)
-works offline.
+**Network needs at the venue:** the Vercel page loads Three.js from a CDN
+and the backend must be reachable — test on the venue Wi-Fi/hotspot. If the
+venue network is unusable, fall back to the local demo:
+`cd backend && python -m uvicorn main:app --port 8000` → open
+`http://127.0.0.1:8000` (everything works offline except Gemini narration).
 
 ---
 
@@ -426,32 +440,85 @@ demonstrated live, not promised.
 | **Supabase / Upstash / Sentry** | optional persistence / cache+rate-limit / error tracking (all no-op without keys) | `backend/.env` |
 | **Kaggle** (training-time only) | GPU for the full-scale descriptor training | `backend/train_descriptor.py` |
 
-## 14 · Vercel deployment — how it fits the demo
+## 14 · Deployment — the Vercel + Render setup (do this ONCE, before demo day)
 
-- Vercel hosts the **frontend only** (`vercel.json`: `outputDirectory:
-  "frontend"`). The backend must run on a long-lived host (Render/Railway/VM)
-  or, for the demo, **your own laptop** — Python + OpenCV + scene data do
-  not fit serverless cold starts.
-- The deployed frontend knows the backend through **one variable**:
-  `window.API_BASE` in `frontend/config.js` (empty = same origin, which is
-  what localhost uses). CORS on the backend is already
-  `allow_origins=["*"]`, so a Vercel frontend can call a remote backend.
-- **Demo-day recommendation:** run the backend locally and open
-  `http://127.0.0.1:8000` — zero network dependence for the core pipeline.
-  Use the Vercel URL as the "deployed product" screenshot; if you demo from
-  Vercel, set `API_BASE` to your backend's public URL and redeploy
-  (`vercel --prod`).
+**The one fact to remember:** Vercel hosts the **frontend only**
+(`vercel.json`: `outputDirectory: "frontend"`). Python + OpenCV + scene
+data do not fit serverless, so the **backend lives on Render** (free tier
+works). The two talk over HTTPS; CORS on the backend is already
+`allow_origins=["*"]`.
+
+Everything the backend needs at boot is **committed to this repo**: the
+three demo scenes (`data/processed/ohrc_real`, `tycho_synthetic`,
+`demo_tmc` + `registry.json`) and the trained model
+(`backend/models/descriptor.onnx`, 0.44 MB). A fresh clone boots complete.
+
+### One-time setup (~20 minutes)
+
+**A. Deploy the backend on Render (no manual config — the Blueprint does it):**
+1. Push this repo to GitHub (it already is — `render.yaml` is at the root).
+2. **render.com** → sign in with GitHub → **New → Blueprint** → pick the
+   `Lunalink` repo → Render reads `render.yaml` → **Apply**.
+3. Wait for the build (`pip install -r requirements.txt`, then
+   `uvicorn main:app --host 0.0.0.0 --port $PORT`). Note the URL, e.g.
+   `https://sih26166-backend.onrender.com`.
+4. Verify: open `https://<backend-url>/health` → must say
+   `"learned_model_loaded": true`. If it says false, the ONNX file didn't
+   make it — check the Render build log for git errors.
+5. (Optional, dashboard → Environment) add `GOOGLE_API_KEY` for live Gemini
+   narration, and optionally Supabase/Upstash/Sentry keys. Without them
+   everything still works: narration falls back to the local template.
+
+**B. Point the Vercel frontend at the backend:**
+1. Edit `frontend/config.js` → set
+   `window.API_BASE = "https://<backend-url>";` (the exact URL from A.3,
+   no trailing slash).
+2. From the repo root: `vercel --prod` (or push to GitHub — if the Vercel
+   project is connected to the repo, it redeploys automatically).
+3. Open the Vercel URL → the status badge must turn green within ~60 s.
+
+**C. Verify the deployed pair end-to-end** (from any machine):
+- 01 MATCH auto-runs on `CH-2 OHRC real scene` ✓
+- 02 TERRAIN renders ✓
+- 03 UPLOAD with `data/demo_upload/ch2_ohrc_real_crop_web.jpg` ✓
+- 04 NARRATION ✓
+- `python _sanity_check.py <backend-url>` from a clone also exercises the
+  whole API against the deployed backend.
+
+### Two behavior differences on the deployed backend (be ready to explain)
+
+1. **Cold start / spin-down (Render free tier).** After ~15 min idle the
+   service sleeps; the next request takes ~50 s to boot. **Pre-warm before
+   the demo** (§0 step 1) — open `/health` in a tab and keep it open. Say
+   to judges: "that's the free tier's cost control, not our latency — the
+   pipeline itself runs in seconds, and it's cache-warm after the first
+   match."
+2. **New uploads get a simulated second-pass reference, not a NASA strip.**
+   The 3.8 GB LRO NAC library stays on the team machine (it cannot ship to
+   GitHub). The three committed scenes carry their REAL auto-selected NASA
+   reference (`M1249388815LC`), so the flagship match is still
+   source-vs-NASA. For a fresh upload the auto-selector finds no local
+   library and generates the documented **simulated second pass** (gamma,
+   radiance gradient, noise, slight rotation/scale) — recorded verbatim in
+   the scene metadata and shown in the reference caption. This is the
+   graceful-degradation design working exactly as documented, on two
+   continents' worth of infrastructure differences.
+
 
 ## 15 · Troubleshooting during the demo
 
 | Symptom | Meaning / fix |
 |---|---|
-| Red status badge `backend offline — CLICK TO RETRY` | Start uvicorn (`cd backend && python -m uvicorn main:app --port 8000`), then click the badge — boot retries with backoff automatically. |
-| Dropdown says scenes unavailable | Same as above; the page never gets stuck on "loading…" — it tells you and offers retry. |
-| Narration says `[local template]` | Gemini quota exhausted (resets daily) — the fallback carries identical numbers; say "designed fallback" and move on. |
-| First match on a scene is slow (5–15 s) | Fresh compute + the LRO NAC auto-selection scan; results cache afterwards (cache tier is shown in the panel). |
-| Terrain panel says TERRAIN UNAVAILABLE | Backend restarted after the page loaded — click the status badge to re-boot. |
+| Red status badge `backend offline — CLICK TO RETRY` on the Vercel page | (1) Backend asleep — hit `/health` once and wait ~50 s, click the badge. (2) `window.API_BASE` in `frontend/config.js` empty or wrong → set it to the Render URL, `vercel --prod`. (3) Backend not deployed → §14 step A. |
+| First request after idle takes ~50 s | Render free-tier spin-down — pre-warm per §0; not pipeline latency. |
+| Health says `learned_model_loaded: false` on Render | `descriptor.onnx` missing from the deploy — check the Render build log; the file is committed at `backend/models/descriptor.onnx`. |
+| Uploads on the deployed backend say `SIMULATED SECOND PASS` in the reference caption | Expected — the 3.8 GB LRO NAC library stays local; committed scenes keep their REAL NASA reference. Explain per §14. |
+| Narration says `[local template]` | Gemini quota exhausted (resets daily) or `GOOGLE_API_KEY` not set in the Render environment — the fallback carries identical numbers; say "designed fallback" and move on. |
+| First match on a scene is slow (5–15 s) | Fresh compute + registration scan; results cache afterwards (cache tier is shown in the panel). |
+| Terrain panel says TERRAIN UNAVAILABLE | Backend restarted/spun down after the page loaded — click the status badge to re-boot. |
 | Canvases say "image unavailable" | Backend `/static` not reachable — same root cause as the red badge. |
+| Venue Wi-Fi blocks/hinders the demo | Fallback: local backend `cd backend && python -m uvicorn main:app --port 8000` → `http://127.0.0.1:8000` (offline-capable except Gemini). |
+| Red status badge in the LOCAL demo | Start uvicorn, then click the badge — boot retries with backoff automatically; the page never sticks on "loading…". |
 
 
 

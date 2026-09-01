@@ -5,11 +5,12 @@ descriptor was trained, and the mathematical formulation of every stage.
 Everything here is grounded in the actual code — file/function references
 included so you can defend any claim live.
 
-**Architecture in one line:** zero-build vanilla JS + Three.js frontend,
-FastAPI backend, OpenCV SIFT + custom ONNX learned descriptor + RANSAC
-matching, FFT shape-from-shading DEMs, auto-selected NASA LROC NAC
-references, Supabase/Upstash/Sentry/Gemini as *optional* no-op-without-keys
-integrations. Total cost: $0.
+**Architecture in one line:** zero-build vanilla JS + Three.js frontend
+(static on **Vercel**), FastAPI backend (container host on **Render**, from
+the repo's `render.yaml` Blueprint), OpenCV SIFT + custom ONNX learned
+descriptor + RANSAC matching, FFT shape-from-shading DEMs, auto-selected
+NASA LROC NAC references, Supabase/Upstash/Sentry/Gemini as *optional*
+no-op-without-keys integrations. Total cost: $0.
 
 ---
 
@@ -128,6 +129,30 @@ vanilla Postgres (our schema.sql is plain SQL), Upstash → local Redis
 Gemini → the built-in template narration or a local LLM. The *data* is
 already local (PRADAN PDS4 products + NASA LRO NAC strips on disk) —
 nothing core phones home.
+
+### 16. Walk me through your deployment (live, right now).
+Two pieces, one wire:
+- **Frontend → Vercel.** The whole UI is one static HTML file
+  (`vercel.json` sets `outputDirectory: frontend`) — zero build, so the
+  deployment artifact IS the source. Vercel gives the global CDN.
+- **Backend → Render.** Python + OpenCV + scene data can't live in
+  serverless functions, so the FastAPI app runs as a web service deployed
+  from the repo's `render.yaml` Blueprint (build: `pip install -r
+  requirements.txt`, start: `uvicorn main:app --host 0.0.0.0 --port $PORT`,
+  health check `/health`). The three demo scenes and the trained
+  `descriptor.onnx` are committed, so a fresh deploy boots complete.
+- **The wire.** One variable: `window.API_BASE` in `frontend/config.js`
+  points the Vercel page at the Render URL; CORS on the backend is
+  `allow_origins=["*"]`. No cookies, no sessions — stateless JSON + static
+  imagery under `/static`.
+- **Cost: $0** (Vercel Hobby + Render free tier + Gemini free tier). The
+  free tier sleeps after ~15 min idle — a cost-control trade-off, not
+  latency: first request warms it in ~50 s, and the pipeline itself runs in
+  seconds with cache hits after.
+- **Why this proves portability:** the same backend boots unchanged on a
+  laptop (`uvicorn main:app --port 8000`), on Render, or on ISRO
+  infrastructure — nothing core phones home (Q15).
+
 
 ---
 
