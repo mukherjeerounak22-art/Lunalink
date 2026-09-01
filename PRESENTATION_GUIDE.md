@@ -151,7 +151,12 @@ Two pieces, one wire:
   seconds with cache hits after.
 - **Why this proves portability:** the same backend boots unchanged on a
   laptop (`uvicorn main:app --port 8000`), on Render, or on ISRO
-  infrastructure — nothing core phones home (Q15).
+  infrastructure — nothing core phones home (Q15). Demo-day reality check:
+  the live demo runs the frontend from Vercel with the backend on our own
+  laptop behind a free HTTPS tunnel (`start_demo_tunnel.ps1`) — no cold
+  starts, and the full 3.8 GB NASA reference library stays live so fresh
+  uploads get real NASA auto-selection; Render remains the always-on
+  fallback URL (Q on cold starts below).
 
 
 ---

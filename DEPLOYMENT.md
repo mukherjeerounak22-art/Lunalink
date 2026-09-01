@@ -89,12 +89,20 @@ git push -u origin main
 ⚠️ Before pushing, check `git status` — you must NOT see `data/`, `.env`, or
 any `.onnx`. If you do, stop and fix `.gitignore` first.
 
-## 6. Vercel (frontend) + Render (backend) — the deployed demo
+## 6. Vercel (frontend) + backend — the deployed demo
 
 The frontend is a static single page — ideal for Vercel. **Do not deploy the
 backend to Vercel**: Python + OpenCV + scene data don't fit serverless cold
-starts. The backend deploys to Render from the repo's `render.yaml`
-Blueprint, which includes the committed demo scenes and `descriptor.onnx`.
+starts. Two backend options:
+
+- **Option A (demo day): backend on your laptop + free cloudflared HTTPS
+  tunnel** — `start_demo_tunnel.ps1` (repo root) does it in one command and
+  prints `https://<vercel>/?api=<tunnel>`. The `?api=` query parameter is
+  honored by `frontend/config.js`, so changing tunnel URLs never needs a
+  Vercel redeploy. Full caveats: [`DEMO_INSTRUCTIONS.md` §14 Option A].
+- **Option B (always-on): backend on Render** from the repo's
+  `render.yaml` Blueprint, which includes the committed demo scenes and
+  `descriptor.onnx`.
 
 1. (Once) `npm i -g vercel`, then `vercel login`.
 2. From the repo root: `vercel` → **Link to existing project? N** → name

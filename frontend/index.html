@@ -475,6 +475,11 @@ async function checkHealth() {
   try {
     const j = await (await fetch(API + "/health", { cache: "no-store" })).json();
     el.textContent = "backend online · " + j.pipeline;
+    /* hover the badge to see exactly which backend answered — instant
+       demo-day debugging (localhost vs Render vs tunnel via ?api=) */
+    el.title = "API: " + (API || location.origin) +
+      (API ? "" : " (same origin)") +
+      " · learned model: " + (j.learned_model_loaded ? "loaded" : "not loaded");
     el.className = "ok";
     return true;
   } catch (e) {

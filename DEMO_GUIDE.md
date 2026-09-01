@@ -2,12 +2,16 @@
 
 How to run, what to upload, and the 60-second judge demo.
 
-## Run it — two ways
+## Run it — three ways
 
-**Primary (demo day): the Vercel link.**
-The Vercel deployment is the frontend; it talks to the backend deployed on
-Render (free tier) via `frontend/config.js:window.API_BASE`. One-time
-setup (~20 min, Blueprint `render.yaml` included) is in
+**Primary (demo day): Vercel frontend + backend on your laptop via tunnel.**
+Run `start_demo_tunnel.ps1` (repo root) — it boots the backend, opens a
+free cloudflared HTTPS tunnel, and prints the URL:
+`https://<vercel>/?api=<tunnel>`. No cold starts; the full NASA LRO
+reference library stays live for fresh uploads.
+
+**Alternative (always-on): Vercel frontend + Render backend.**
+`render.yaml` Blueprint included; setup in
 [`DEMO_INSTRUCTIONS.md` §14](DEMO_INSTRUCTIONS.md). Pre-warm the backend
 (`https://<backend>.onrender.com/health` in a tab) ~5 min before demoing —
 the free tier sleeps after ~15 min idle.

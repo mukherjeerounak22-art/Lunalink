@@ -22,26 +22,27 @@ while never letting the AI generate a single number.
 ## 0 · Pre-demo checklist (T−30 minutes)
 
 **You will demo from the Vercel link.** The Vercel deployment is the
-frontend only — it talks to the backend over HTTPS (see §14 to deploy the
-backend on Render with the included `render.yaml`, and to wire
-`frontend/config.js` → `window.API_BASE`). Do this checklist against the
-VERCEL URL, not localhost:
+frontend only — it must reach a backend over HTTPS. Three ways to supply
+that backend (full setup details in §14):
 
-1. **Wake the backend FIRST** (Render free tier spins down after ~15 min
-   idle; the first request after a spin-down takes ~50 s). Open
-   `https://<your-backend>.onrender.com/health` in a browser tab until it
-   returns `{"status":"ok","learned_model_loaded":true,...}`. Keep that tab
-   open — it keeps the service warm.
-2. **Open the Vercel link** — the status badge must turn
-   `backend online · SIFT + learned ONNX descriptor` (green = CORS +
-   `API_BASE` wired correctly). If it stays red: click it (retries with
-   backoff), and check §15.
+| Setup | Backend lives at | Cold start? | Live NASA reference for new uploads? | Best for |
+|---|---|---|---|---|
+| **A. Laptop + tunnel** (recommended) | your laptop, exposed by a free cloudflared HTTPS tunnel (`start_demo_tunnel.ps1`) | none | **YES — full 3.8 GB LRO library is live** | the live demo |
+| B. Render | `https://<you>.onrender.com` (Blueprint in repo) | ~50 s after 15 min idle | no (library can't ship) | "always-on URL" |
+| C. All-local | `http://127.0.0.1:8000` (no Vercel) | none | yes | offline fallback |
+
+**Setup A — start (T−15 min):** run `powershell -ExecutionPolicy Bypass
+-File start_demo_tunnel.ps1` from the repo root. It boots the backend,
+opens the tunnel, and prints the exact URL to open:
+`https://<your-vercel-url>/?api=<tunnel-url>`. Keep the window open.
+Because the backend URL is passed via the `?api=` query parameter, a new
+tunnel URL never requires redeploying Vercel.
 
 Then verify against the Vercel page:
 
 | Check | Expected |
 |---|---|
-| Status badge (top right) | `backend online · SIFT + learned ONNX descriptor` |
+| Status badge (top right) | `backend online · SIFT + learned ONNX descriptor` — **hover it**: the tooltip must show your tunnel/Render URL, not the Vercel origin |
 | Scene dropdown (01 MATCH) | lists `CH-2 OHRC real scene`, `Tycho (synthetic stand-in)`, `demo_tmc` |
 | First match auto-runs | match ring fills, keypoints overlay on both canvases |
 | 02 TERRAIN | mesh auto-rotates; drag orbits, scroll zooms |
@@ -50,8 +51,8 @@ Then verify against the Vercel page:
 | Backup | screen-record the full demo beforehand; also keep a local `python -m uvicorn main:app --port 8000` fallback running on the demo laptop |
 
 **Network needs at the venue:** the Vercel page loads Three.js from a CDN
-and the backend must be reachable — test on the venue Wi-Fi/hotspot. If the
-venue network is unusable, fall back to the local demo:
+and reaches your backend through the tunnel — test on the venue
+Wi-Fi/hotspot. If the venue network is unusable, fall back to setup C:
 `cd backend && python -m uvicorn main:app --port 8000` → open
 `http://127.0.0.1:8000` (everything works offline except Gemini narration).
 
@@ -440,20 +441,51 @@ demonstrated live, not promised.
 | **Supabase / Upstash / Sentry** | optional persistence / cache+rate-limit / error tracking (all no-op without keys) | `backend/.env` |
 | **Kaggle** (training-time only) | GPU for the full-scale descriptor training | `backend/train_descriptor.py` |
 
-## 14 · Deployment — the Vercel + Render setup (do this ONCE, before demo day)
+## 14 · Deployment — supplying the backend behind the Vercel frontend
 
 **The one fact to remember:** Vercel hosts the **frontend only**
 (`vercel.json`: `outputDirectory: "frontend"`). Python + OpenCV + scene
-data do not fit serverless, so the **backend lives on Render** (free tier
-works). The two talk over HTTPS; CORS on the backend is already
-`allow_origins=["*"]`.
+data do not fit serverless, so the backend must run somewhere HTTPS-
+reachable — your laptop through a tunnel (Option A) or Render (Option B).
+CORS on the backend is already `allow_origins=["*"]`.
+
+### Option A — backend on YOUR laptop + free HTTPS tunnel (recommended for the demo)
+
+**Why it's the best option:** zero cold starts, zero spin-downs, and the
+full 3.8 GB NASA LRO NAC library stays live — so **fresh uploads get real
+NASA reference auto-selection**, which no cloud deploy can offer.
+
+**Why a tunnel at all:** the Vercel page is HTTPS, and browsers block
+HTTPS pages from calling plain-HTTP backends ("mixed content"). The free
+cloudflared quick tunnel gives `localhost:8000` a public HTTPS address —
+nothing else changes.
+
+One-time: `winget install Cloudflare.cloudflared` (no account needed).
+
+**Every demo session (~2 minutes):**
+1. From the repo root:
+   `powershell -ExecutionPolicy Bypass -File start_demo_tunnel.ps1`
+   It starts uvicorn + the tunnel and prints the ready line:
+   `https://<vercel>/?api=https://<random>.trycloudflare.com`
+2. Open that URL. Hover the green status badge — the tooltip must show
+   the `trycloudflare.com` URL, not the Vercel origin.
+3. The tunnel URL changes every run — that's fine: it travels in the
+   `?api=` query parameter (`frontend/config.js`), so **no Vercel redeploy
+   is ever needed**.
+4. After the demo:
+   `Get-Process python, cloudflared | Stop-Process -Force`
+
+Caveat: the laptop must stay awake and online (Windows Settings → power:
+never sleep while plugged in, on demo day), and the venue network must
+allow outbound HTTPS (cloudflared is just TLS to Cloudflare's edge — works
+on practically every Wi-Fi/hotspot).
+
+### Option B — backend on Render (always-on URL, no laptop)
 
 Everything the backend needs at boot is **committed to this repo**: the
 three demo scenes (`data/processed/ohrc_real`, `tycho_synthetic`,
 `demo_tmc` + `registry.json`) and the trained model
 (`backend/models/descriptor.onnx`, 0.44 MB). A fresh clone boots complete.
-
-### One-time setup (~20 minutes)
 
 **A. Deploy the backend on Render (no manual config — the Blueprint does it):**
 1. Push this repo to GitHub (it already is — `render.yaml` is at the root).
@@ -485,14 +517,13 @@ three demo scenes (`data/processed/ohrc_real`, `tycho_synthetic`,
 - `python _sanity_check.py <backend-url>` from a clone also exercises the
   whole API against the deployed backend.
 
-### Two behavior differences on the deployed backend (be ready to explain)
+### Two behavior differences on a Render backend (be ready to explain)
 
 1. **Cold start / spin-down (Render free tier).** After ~15 min idle the
    service sleeps; the next request takes ~50 s to boot. **Pre-warm before
-   the demo** (§0 step 1) — open `/health` in a tab and keep it open. Say
-   to judges: "that's the free tier's cost control, not our latency — the
-   pipeline itself runs in seconds, and it's cache-warm after the first
-   match."
+   the demo** — open `/health` in a tab and keep it open. Say to judges:
+   "that's the free tier's cost control, not our latency — the pipeline
+   itself runs in seconds, and it's cache-warm after the first match."
 2. **New uploads get a simulated second-pass reference, not a NASA strip.**
    The 3.8 GB LRO NAC library stays on the team machine (it cannot ship to
    GitHub). The three committed scenes carry their REAL auto-selected NASA
@@ -501,15 +532,17 @@ three demo scenes (`data/processed/ohrc_real`, `tycho_synthetic`,
    library and generates the documented **simulated second pass** (gamma,
    radiance gradient, noise, slight rotation/scale) — recorded verbatim in
    the scene metadata and shown in the reference caption. This is the
-   graceful-degradation design working exactly as documented, on two
-   continents' worth of infrastructure differences.
+   graceful-degradation design working exactly as documented. (Option A
+   avoids this entirely — the real library is live on your laptop.)
 
 
 ## 15 · Troubleshooting during the demo
 
 | Symptom | Meaning / fix |
 |---|---|
-| Red status badge `backend offline — CLICK TO RETRY` on the Vercel page | (1) Backend asleep — hit `/health` once and wait ~50 s, click the badge. (2) `window.API_BASE` in `frontend/config.js` empty or wrong → set it to the Render URL, `vercel --prod`. (3) Backend not deployed → §14 step A. |
+| Red status badge `backend offline — CLICK TO RETRY` on the Vercel page | (1) Tunnel/backend not running → rerun `start_demo_tunnel.ps1`, reopen the `?api=` URL. (2) `window.API_BASE` mis-baked for Render → fix + `vercel --prod`. (3) Backend not deployed → §14 Option B step A. |
+| Badge green but tooltip shows the Vercel origin | You opened the Vercel URL without the `?api=<tunnel>` parameter — use the exact URL printed by `start_demo_tunnel.ps1`. |
+| Tunnel URL expired / changed | Quick tunnels are per-run — rerun the script and open the newly printed `?api=` URL (no Vercel redeploy needed). |
 | First request after idle takes ~50 s | Render free-tier spin-down — pre-warm per §0; not pipeline latency. |
 | Health says `learned_model_loaded: false` on Render | `descriptor.onnx` missing from the deploy — check the Render build log; the file is committed at `backend/models/descriptor.onnx`. |
 | Uploads on the deployed backend say `SIMULATED SECOND PASS` in the reference caption | Expected — the 3.8 GB LRO NAC library stays local; committed scenes keep their REAL NASA reference. Explain per §14. |
@@ -519,6 +552,76 @@ three demo scenes (`data/processed/ohrc_real`, `tycho_synthetic`,
 | Canvases say "image unavailable" | Backend `/static` not reachable — same root cause as the red badge. |
 | Venue Wi-Fi blocks/hinders the demo | Fallback: local backend `cd backend && python -m uvicorn main:app --port 8000` → `http://127.0.0.1:8000` (offline-capable except Gemini). |
 | Red status badge in the LOCAL demo | Start uvicorn, then click the badge — boot retries with backoff automatically; the page never sticks on "loading…". |
+
+---
+
+## 16 · Full end-to-end test pass (run ONCE before demo day — ~10 minutes)
+
+Every expected number below was observed on a live run of this exact
+pipeline, so you can compare. Do it against your actual demo setup
+(laptop+tunnel or Render), from a **different device** if possible
+(proves the whole chain, not just localhost).
+
+**T1 · Boot & health.** Open the demo URL (Vercel `?api=` link, or local).
+Badge → `backend online · SIFT + learned ONNX descriptor`; hover shows the
+right backend URL. Dropdown lists exactly: `CH-2 OHRC real scene`,
+`Tycho (synthetic stand-in)`, `demo_tmc`. The default scene's match
+auto-runs.
+
+**T2 · Flagship match (real ISRO vs real NASA).** On `CH-2 OHRC real scene`:
+match ring ≈ **2.5%**, inliers **7**, RMSE ≈ **1.2 px**, craters **25**;
+Method breakdown: SIFT ≈ 90, learned (ONNX) ≈ 190 candidates; reference
+caption: `REFERENCE · REAL LROC NAC — AUTO-SELECTED`
+(`M1249388815LC`). *Talking point:* the honest cross-mission number —
+different cameras, orbits, suns; the low % IS the research problem.
+
+**T3 · Terrain.** Switch to 02 TERRAIN: 192×192 grid, extent ≈ 1.0 km,
+relief ≈ 0–90 m, 8 contour levels, vertical exaggeration printed in the
+readout. Drag = orbit, scroll = zoom, auto-rotate when idle.
+
+**T4 · THE MAIN UPLOAD.** 03 UPLOAD → drop
+`data/demo_upload/ch2_ohrc_real_crop_web.jpg` (~10 s). Expected kv panel:
+relief **0 – 85.4 m**, grid 192×192, sun AUTO-fitted to **az 270.8° / el 10°**
+(the mission's real sun angles — sliders move themselves). Then:
+- **⬡ SEND TO TERRAIN 3D** → your upload's mesh appears in 02.
+- **⚡ CREATE MATCHABLE SCENE** → the scene appears in 01 MATCH and, with
+  the full LRO library live (laptop/Render-local), auto-selects the REAL
+  NASA reference; match ≈ 1.7%, inliers 5, SIFT ≈ 86 + learned ≈ 216.
+
+**T5 · Sun physics live-demo.** On the upload result: drag the azimuth
+slider → label flips to `MANUAL override` and the relief shading re-renders
+instantly client-side (shadows swing). Reload → back to AUTO from mission
+metadata.
+
+**T6 · Negative control (honesty).** Upload
+`data/demo_upload/negative_control_low_feature.png` → relief collapses to
+near-zero: the pipeline reports what the image contains and refuses to
+invent terrain. Say: "we prove our pipeline doesn't hallucinate."
+
+**T7 · Synthetic crater field (visual).** Upload
+`data/demo_upload/synthetic_craters_feature_rich.png` → obvious crater
+bowls/rims in relief and the 3-D mesh; reference caption typically shows
+`SIMULATED SECOND PASS` (no LRO strip overlaps the synthetic scene — the
+auto-fallback working as documented).
+
+**T8 · Full mission product.** 03 UPLOAD → drop
+`data/demo_upload/product_pds4_demo.zip` (or select the `.xml` + `.img`
+pair together) → backend parses the PDS4 label, builds the scene
+automatically (~6 s), selects it in 01 MATCH: 4 craters detected, full
+pipeline run, reference auto-selected.
+
+**T9 · Gemini narration.** 01 MATCH (flagship scene) → 🔊 NARRATE FOR
+JUDGES → `[Gemini]` + ≤120-word summary quoting the computed metrics
+(rate-limited to 20/min by a Redis sliding window — that's the limiter
+working if you ever see a rate-limit message). Also try 04 NARRATION tab.
+
+**T10 · Persistence check (optional).** `data/processed/registry.json`
+now lists the scenes you created; each has `source.png / reference.png /
+dem.npy / craters.json / metadata.json` on disk — "every stage's raw
+artifacts are inspectable."
+
+All green? Screen-record the whole pass as your backup demo video.
+
 
 
 

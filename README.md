@@ -56,12 +56,18 @@ library stay local.
 
 ## Run
 
-**Demo day: the Vercel link.** The frontend is deployed on Vercel; the
-backend runs on Render (free tier) from the included `render.yaml`
-Blueprint, and the two are wired by one variable,
-`frontend/config.js:window.API_BASE`. Full one-time setup:
-[`DEMO_INSTRUCTIONS.md` §14](DEMO_INSTRUCTIONS.md). Pre-warm the backend
-(open `<backend>/health` in a tab) — the free tier sleeps after ~15 min idle.
+**Demo day — option A (recommended): Vercel frontend + backend on your laptop.**
+Run `powershell -ExecutionPolicy Bypass -File start_demo_tunnel.ps1` from
+the repo root — it boots the backend, opens a free cloudflared HTTPS tunnel
+(mixed-content-safe), and prints the demo URL to open:
+`https://<vercel>/?api=<tunnel>`. No cold starts, and the full 3.8 GB NASA
+LRO library stays live for fresh uploads.
+
+**Demo day — option B (always-on URL): Vercel frontend + Render backend.**
+The backend deploys on Render (free tier) from the included `render.yaml`
+Blueprint, wired by one variable, `frontend/config.js:window.API_BASE`
+(or per-page via `?api=`). Full setup:
+[`DEMO_INSTRUCTIONS.md` §14](DEMO_INSTRUCTIONS.md).
 
 **Local (offline fallback / development):**
 

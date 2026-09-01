@@ -20,9 +20,9 @@ machine get the exact same test images — clone and demo.
 
 ## 60-second demo flow
 
-1. Open the **Vercel link** (backend pre-warmed — see the top of
-   `DEMO_INSTRUCTIONS.md`) → backend health badge turns green.
-   (Local fallback: `http://127.0.0.1:8000`.)
+1. Laptop backend: run `start_demo_tunnel.ps1` → open the printed
+   `https://<vercel>/?api=<tunnel>` URL → badge green (or Render/localhost
+   fallbacks — see `DEMO_INSTRUCTIONS.md` §0).
 2. 01 MATCH: scene `CH-2 OHRC real scene` → RUN MATCH → keypoints,
    homography, RANSAC k, match% (real cross-mission number vs the
    auto-selected NASA reference).
