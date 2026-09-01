@@ -290,7 +290,6 @@ def ingest_product(path: str, scene_id: str = None,
         raise HTTPException(400, str(exc))
     global _registry
     _registry = ingest.load_registry()
-    integrations.capture_message  # breadcrumb below
     integrations.breadcrumb("scene ingested", data={
         "scene": res["scene_id"], "product": p})
     return res

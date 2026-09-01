@@ -230,9 +230,19 @@ def gemini_ok():
     return bool(GOOGLE_API_KEY)
 
 
+_gemini_cooldown_until = 0.0     # 429 quota cooldown (seconds since epoch)
+
+
 def gemini_narrate(prompt):
+    """Gemini narration with 429-quota awareness: on a quota-exceeded
+    response we log ONE warning-level event and stop calling the API for
+    5 minutes (the local-template fallback takes over), so a dead quota
+    cannot flood Sentry with an error per narrate click."""
+    global _gemini_cooldown_until
     if not gemini_ok():
         return None
+    if time.time() < _gemini_cooldown_until:
+        return None                                  # stay on local fallback
     import httpx
     try:
         r = httpx.post(
@@ -241,7 +251,17 @@ def gemini_narrate(prompt):
             json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
         r.raise_for_status()
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception as exc:                       # noqa: BLE001
+    except httpx.HTTPStatusError as exc:              # noqa: BLE001
+        if exc.response is not None and exc.response.status_code == 429:
+            _gemini_cooldown_until = time.time() + 300
+            capture_message(
+                "Gemini quota exceeded (429) - narration falls back to the "
+                "local template for 5 minutes; free-tier quota resets daily "
+                "or upgrade the key's plan.", level="warning")
+        else:
+            capture_exception(exc)
+        return None
+    except Exception as exc:                          # noqa: BLE001
         capture_exception(exc)
         return None
 
