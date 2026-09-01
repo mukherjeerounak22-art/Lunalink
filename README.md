@@ -4,6 +4,12 @@ Cross-illumination registration of a **real Chandrayaan-2 OHRC** scene with a
 holographic 3D terrain view, per `SIH26166_Implementation_Plan_and_Mathematics.md`
 and `SIH26166_Tomorrow_Plan_Kaggle_and_Keys.md`.
 
+> **Docs:** [`DEMO_GUIDE.md`](DEMO_GUIDE.md) — how to run it, demo test
+> images, 60-second judge demo. [`PRESENTATION_GUIDE.md`](PRESENTATION_GUIDE.md) —
+> judge Q&A, full system walkthrough, ONNX training story, and the
+> mathematical formulation of every stage.
+
+
 ## Dataset (already walked through, Stage 0/1)
 `data/UNZIPPED_DATA/ch2_ohr_ncp_20210401T2357376656_d_img_d18/`
 - **Image**: 90,148 × 12,000 px 8-bit panchromatic, GSD 0.265 m/px, alt 104.22 km,
