@@ -473,7 +473,7 @@ window.__showTab = showTab;
 async function checkHealth() {
   const el = $("status");
   try {
-    const j = await (await fetch(API + "/health", { cache: "no-store" })).json();
+    const j = await (await fetchT(API + "/health", { cache: "no-store" }, 12000)).json();
     el.textContent = "backend online · " + j.pipeline;
     /* hover the badge to see exactly which backend answered — instant
        demo-day debugging (localhost vs Render vs tunnel via ?api=) */
@@ -497,7 +497,7 @@ let scenes = [];
 async function loadScenes() {
   const sel = $("sceneSel"), errEl = $("sceneError");
   try {
-    const res = await fetch(API + "/craters", { cache: "no-store" });
+    const res = await fetchT(API + "/craters", { cache: "no-store" }, 20000);
     if (!res.ok) throw new Error(res.status);
     scenes = await res.json();
   } catch (e) {
@@ -581,14 +581,15 @@ async function runMatch() {
   $("cvA").classList.add("skel"); $("cvB").classList.add("skel");
   try {
     if (!_cacheMatch) {
-      const res = await fetch(API + "/match/" + id);
+      const res = await fetchT(API + "/match/" + id, null, 180000);
       if (!res.ok) throw new Error(res.status);
       _cacheMatch = await res.json();
     }
     renderMatch(_cacheMatch);
     if (window.__loadTerrain) await window.__loadTerrain(id);
   } catch (e) {
-    errEl.textContent = "Match failed — check the backend and try again.";
+    errEl.textContent = "Match failed — " + (e.message ||
+      "check the backend") + " — then try again.";
     errEl.classList.add("show");
     $("pctVal").textContent = "–";
     /* never leave skeletons spinning: clear every one of them on failure */
@@ -631,6 +632,8 @@ async function drawOverlays(m) {
   const load = src => new Promise((res, rej) => {
     const im = new Image(); im.onload = () => res(im);
     im.onerror = () => rej(new Error("image load failed: " + src));
+    /* hard timeout so the canvas skeleton can never hang forever */
+    setTimeout(() => rej(new Error("image load timed out: " + src)), 30000);
     im.src = (window.API_BASE || "") + src;
   });
   let imA = null, imB = null;
@@ -689,7 +692,7 @@ async function narrate() {
   const out = $("narrateOut");
   out.classList.add("skel", "block");
   try {
-    const r = await fetch(API + "/narrate/" + id);
+    const r = await fetchT(API + "/narrate/" + id, null, 90000);
     if (r.status === 429) {
       out.textContent = "Rate limited — the sliding-window limiter is working as designed.";
       return;
@@ -748,7 +751,7 @@ async function analyzeProduct(files) {
   fd.append("scene_name", (files[0].name || "product")
     .replace(/\.[^.]+$/, "").replace(/_d_img_d18$/i, ""));
   try {
-    const r = await fetch(API + "/ingest_product_upload", { method: "POST", body: fd });
+    const r = await fetchT(API + "/ingest_product_upload", { method: "POST", body: fd }, 180000);
     if (!r.ok) throw new Error(await r.text());
     const j = await r.json();
     lastPayload = j.terrain;
@@ -823,7 +826,7 @@ async function analyze(file) {
   fd.append("sun_az", $("azRange").value);
   fd.append("sun_el", $("elRange").value);
   try {
-    const r = await fetch(API + "/analyze_upload", { method: "POST", body: fd });
+    const r = await fetchT(API + "/analyze_upload", { method: "POST", body: fd }, 180000);
     if (!r.ok) throw new Error(await r.text());
     const payload = await r.json();
     lastPayload = payload;
@@ -886,7 +889,7 @@ $("sceneBtn").addEventListener("click", async () => {
     fd.append("sun_el", $("elRange").value);
     fd.append("make_scene", "true");
     fd.append("scene_name", (lastFile.name || "scene").replace(/\.[^.]+$/, ""));
-    const r = await fetch(API + "/analyze_upload", { method: "POST", body: fd });
+    const r = await fetchT(API + "/analyze_upload", { method: "POST", body: fd }, 180000);
     if (!r.ok) throw new Error("server responded " + r.status);
     const j = await r.json();
     $("uploadNote").textContent = "Scene '" + j.created_scene +
@@ -1004,7 +1007,7 @@ async function loadTerrain(id) {
   overlay.style.display = 'flex';
   overlay.textContent = 'BUILDING TERRAIN MESH…';
   try {
-    const res = await fetch((window.API_BASE || "") + '/terrain/' + id);
+    const res = await fetchT((window.API_BASE || "") + '/terrain/' + id, null, 90000);
     if (!res.ok) throw new Error('server responded ' + res.status);
     buildTerrain(await res.json());
   } catch (e) {
