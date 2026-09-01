@@ -1,9 +1,15 @@
 # ---- data (1 GB+ scenes, model weights - regeneratable) ----
-data/
+# everything under data/ is regeneratable EXCEPT the curated demo upload
+# set (data/demo_upload/) which is committed so every teammate + the demo
+# machine gets the exact same test images.
+data/*
+!data/demo_upload/
+!data/demo_upload/**
 backend/models/*.onnx
 *.onnx
 Unconfirmed*.crdownload
 *.zip
+!data/demo_upload/product_pds4_demo.zip
 
 # ---- secrets ----
 .env

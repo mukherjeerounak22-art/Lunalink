@@ -217,12 +217,15 @@ a wireframe overlay and 8 contour levels as 3-D line segments. Vertical
 exaggeration is computed from the DEM's own z-span so the display never
 exaggerates silently.
 
-## Demo assets — `data/demo_upload/` (local; `data/` is gitignored)
+## Demo assets — `data/demo_upload/` (committed to the repo)
 
 Real OHRC crop (PNG + fast JPG), synthetic feature-rich crater field, a
 256 px quick version, a **negative control** (flat terrain — proves no
 hallucinated relief), and a PDS4 product pair + ZIP for the direct product
-upload demo. See [`DEMO_GUIDE.md`](DEMO_GUIDE.md).
+upload demo. The folder is committed (gitignore exception) so every clone
+is demo-ready. See [`DEMO_GUIDE.md`](DEMO_GUIDE.md) and
+[`DEMO_INSTRUCTIONS.md`](DEMO_INSTRUCTIONS.md) — the full feature-by-feature
+demo playbook.
 
 ## Repo layout
 

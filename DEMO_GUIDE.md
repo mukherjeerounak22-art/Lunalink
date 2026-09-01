@@ -14,7 +14,10 @@ Optional keys (all graceful no-ops without them) live in `backend/.env`
 (never committed): Supabase, Upstash Redis, Sentry, Gemini. See
 `backend/.env.example`.
 
-## Demo assets — `data/demo_upload/` (local only; `data/` is gitignored)
+## Demo assets — `data/demo_upload/` (committed to the repo)
+
+The curated test-image set lives in the repo (gitignore exception), so a
+fresh clone is demo-ready:
 
 | File | Use it for |
 |---|---|
