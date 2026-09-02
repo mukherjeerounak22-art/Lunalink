@@ -1,0 +1,1973 @@
+{
+ "products": {
+  "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-28T17:12:29.2966Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T1712292966_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T1712292966_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.165501,
+      "lon_deg": 295.395748
+     },
+     "upper_right": {
+      "lat_deg": 88.257175,
+      "lon_deg": 276.367153
+     },
+     "lower_left": {
+      "lat_deg": 61.877108,
+      "lon_deg": 95.820353
+     },
+     "lower_right": {
+      "lat_deg": 61.884484,
+      "lon_deg": 97.209248
+     }
+    },
+    "center": {
+     "lat_deg": 75.04606700000001,
+     "lon_deg": 191.1981255
+    },
+    "sun": {
+     "sun_azimuth_deg": 191.653217,
+     "sun_elevation_deg": 13.075224
+    },
+    "start_time": "2023-05-28T17:12:29.2966Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230527T0746354732_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230527T0746354732_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-27T07:46:35.4732Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230527T0746354732_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230527T0746354732_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.378115,
+      "lon_deg": 308.32537
+     },
+     "upper_right": {
+      "lat_deg": 88.396512,
+      "lon_deg": 286.24816
+     },
+     "lower_left": {
+      "lat_deg": 61.091978,
+      "lon_deg": 114.672395
+     },
+     "lower_right": {
+      "lat_deg": 61.093997,
+      "lon_deg": 116.044312
+     }
+    },
+    "center": {
+     "lat_deg": 74.7401505,
+     "lon_deg": 206.32255924999998
+    },
+    "sun": {
+     "sun_azimuth_deg": 195.503055,
+     "sun_elevation_deg": 13.249601
+    },
+    "start_time": "2023-05-27T07:46:35.4732Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230526T1404411273_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230526T1404411273_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-26T14:04:41.1273Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230526T1404411273_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230526T1404411273_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.511217,
+      "lon_deg": 310.04606
+     },
+     "upper_right": {
+      "lat_deg": 88.437324,
+      "lon_deg": 287.118368
+     },
+     "lower_left": {
+      "lat_deg": 61.496289,
+      "lon_deg": 124.88387
+     },
+     "lower_right": {
+      "lat_deg": 61.492724,
+      "lon_deg": 126.249951
+     }
+    },
+    "center": {
+     "lat_deg": 74.9843885,
+     "lon_deg": 212.07456225
+    },
+    "sun": {
+     "sun_azimuth_deg": 202.440362,
+     "sun_elevation_deg": 12.915281
+    },
+    "start_time": "2023-05-26T14:04:41.1273Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230526T0810424100_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230526T0810424100_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-26T08:10:42.4100Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230526T0810424100_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230526T0810424100_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.431961,
+      "lon_deg": 309.354338
+     },
+     "upper_right": {
+      "lat_deg": 88.325817,
+      "lon_deg": 288.126301
+     },
+     "lower_left": {
+      "lat_deg": 61.0757,
+      "lon_deg": 128.325891
+     },
+     "lower_right": {
+      "lat_deg": 61.069938,
+      "lon_deg": 129.663769
+     }
+    },
+    "center": {
+     "lat_deg": 74.725854,
+     "lon_deg": 213.86757475000002
+    },
+    "sun": {
+     "sun_azimuth_deg": 205.186543,
+     "sun_elevation_deg": 12.99292
+    },
+    "start_time": "2023-05-26T08:10:42.4100Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230526T1602399918_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230526T1602399918_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-26T16:02:39.9918Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230526T1602399918_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230526T1602399918_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.442757,
+      "lon_deg": 309.914159
+     },
+     "upper_right": {
+      "lat_deg": 88.383479,
+      "lon_deg": 287.784859
+     },
+     "lower_left": {
+      "lat_deg": 61.617942,
+      "lon_deg": 123.738991
+     },
+     "lower_right": {
+      "lat_deg": 61.615093,
+      "lon_deg": 125.113386
+     }
+    },
+    "center": {
+     "lat_deg": 75.01481774999999,
+     "lon_deg": 211.63784875
+    },
+    "sun": {
+     "sun_azimuth_deg": 201.005095,
+     "sun_elevation_deg": 12.855932
+    },
+    "start_time": "2023-05-26T16:02:39.9918Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230525T1429005097_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230525T1429005097_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-25T14:29:00.5097Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230525T1429005097_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230525T1429005097_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.554614,
+      "lon_deg": 327.320001
+     },
+     "upper_right": {
+      "lat_deg": 88.524277,
+      "lon_deg": 303.801553
+     },
+     "lower_left": {
+      "lat_deg": 61.546659,
+      "lon_deg": 137.538233
+     },
+     "lower_right": {
+      "lat_deg": 61.544945,
+      "lon_deg": 138.878205
+     }
+    },
+    "center": {
+     "lat_deg": 75.04262375,
+     "lon_deg": 226.884498
+    },
+    "sun": {
+     "sun_azimuth_deg": 214.230356,
+     "sun_elevation_deg": 12.629814
+    },
+    "start_time": "2023-05-25T14:29:00.5097Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230512T2340524400_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230512T2340524400_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-12T23:40:52.4400Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230512T2340524400_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230512T2340524400_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.264351,
+      "lon_deg": 131.26383
+     },
+     "upper_right": {
+      "lat_deg": 88.218662,
+      "lon_deg": 110.150995
+     },
+     "lower_left": {
+      "lat_deg": 62.864556,
+      "lon_deg": 304.068648
+     },
+     "lower_right": {
+      "lat_deg": 62.862152,
+      "lon_deg": 305.502772
+     }
+    },
+    "center": {
+     "lat_deg": 75.55243025,
+     "lon_deg": 212.74656125
+    },
+    "sun": {
+     "sun_azimuth_deg": 210.613759,
+     "sun_elevation_deg": 10.330653
+    },
+    "start_time": "2023-05-12T23:40:52.4400Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230512T1944557987_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230512T1944557987_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-12T19:44:55.7987Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230512T1944557987_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230512T1944557987_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.252905,
+      "lon_deg": 131.427898
+     },
+     "upper_right": {
+      "lat_deg": 88.185867,
+      "lon_deg": 110.571743
+     },
+     "lower_left": {
+      "lat_deg": 60.704818,
+      "lon_deg": 306.339303
+     },
+     "lower_right": {
+      "lat_deg": 60.701183,
+      "lon_deg": 307.679394
+     }
+    },
+    "center": {
+     "lat_deg": 74.46119325000001,
+     "lon_deg": 214.0045845
+    },
+    "sun": {
+     "sun_azimuth_deg": 212.618036,
+     "sun_elevation_deg": 11.094543
+    },
+    "start_time": "2023-05-12T19:44:55.7987Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230612T2218425665_d_dtm_n18": {
+   "product_id": "ch2_tmc_ndn_20230612T2218425665_d_dtm_n18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-06-12T22:18:42.5665Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230612T2218425665_d_dtm_n18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230612T2218425665_d_dtm_n18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.07859,
+      "lon_deg": 95.069631
+     },
+     "upper_right": {
+      "lat_deg": 88.167741,
+      "lon_deg": 73.727954
+     },
+     "lower_left": {
+      "lat_deg": 61.817041,
+      "lon_deg": 255.842742
+     },
+     "lower_right": {
+      "lat_deg": 61.824376,
+      "lon_deg": 257.387913
+     }
+    },
+    "center": {
+     "lat_deg": 74.971937,
+     "lon_deg": 170.50706
+    },
+    "sun": {
+     "sun_azimuth_deg": 176.740449,
+     "sun_elevation_deg": 14.285669
+    },
+    "start_time": "2023-06-12T22:18:42.5665Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230528T1712292966_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-31T11:55:23.8230Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230531T1155238230_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230531T1155238230_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.799666,
+      "lon_deg": 256.246836
+     },
+     "upper_right": {
+      "lat_deg": 88.822532,
+      "lon_deg": 229.738888
+     },
+     "lower_left": {
+      "lat_deg": 61.171515,
+      "lon_deg": 59.770332
+     },
+     "lower_right": {
+      "lat_deg": 61.173327,
+      "lon_deg": 61.035472
+     }
+    },
+    "center": {
+     "lat_deg": 74.99176,
+     "lon_deg": 151.69788200000002
+    },
+    "sun": {
+     "sun_azimuth_deg": 193.619646,
+     "sun_elevation_deg": 13.877441
+    },
+    "start_time": "2023-05-31T11:55:23.8230Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230529T1054305769_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230529T1054305769_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-29T10:54:30.5769Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230529T1054305769_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230529T1054305769_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.231894,
+      "lon_deg": 287.752908
+     },
+     "upper_right": {
+      "lat_deg": 88.34166,
+      "lon_deg": 267.923649
+     },
+     "lower_left": {
+      "lat_deg": 1.721249,
+      "lon_deg": 86.716261
+     },
+     "lower_right": {
+      "lat_deg": 1.726119,
+      "lon_deg": 87.500244
+     }
+    },
+    "center": {
+     "lat_deg": 45.0052305,
+     "lon_deg": 182.4732655
+    },
+    "sun": {
+     "sun_azimuth_deg": 213.743121,
+     "sun_elevation_deg": 38.655573
+    },
+    "start_time": "2023-05-29T10:54:30.5769Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230529T0856342711_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230529T0856342711_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-29T08:56:34.2711Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230529T0856342711_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230529T0856342711_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.152672,
+      "lon_deg": 305.389785
+     },
+     "upper_right": {
+      "lat_deg": 88.442326,
+      "lon_deg": 286.928523
+     },
+     "lower_left": {
+      "lat_deg": 46.700849,
+      "lon_deg": 86.91611
+     },
+     "lower_right": {
+      "lat_deg": 46.711178,
+      "lon_deg": 87.946304
+     }
+    },
+    "center": {
+     "lat_deg": 67.50175625,
+     "lon_deg": 191.79518050000001
+    },
+    "sun": {
+     "sun_azimuth_deg": 197.255443,
+     "sun_elevation_deg": 20.19967
+    },
+    "start_time": "2023-05-29T08:56:34.2711Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230529T1252288208_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230529T1252288208_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-29T12:52:28.8208Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230529T1252288208_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230529T1252288208_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.219798,
+      "lon_deg": 270.787376
+     },
+     "upper_right": {
+      "lat_deg": 88.161335,
+      "lon_deg": 251.24553
+     },
+     "lower_left": {
+      "lat_deg": 46.338893,
+      "lon_deg": 85.623922
+     },
+     "lower_right": {
+      "lat_deg": 46.344429,
+      "lon_deg": 86.643193
+     }
+    },
+    "center": {
+     "lat_deg": 67.26611374999999,
+     "lon_deg": 173.57500525
+    },
+    "sun": {
+     "sun_azimuth_deg": 196.26789,
+     "sun_elevation_deg": 20.287991
+    },
+    "start_time": "2023-05-29T12:52:28.8208Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230528T0920295359_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230528T0920295359_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-28T09:20:29.5359Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T0920295359_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T0920295359_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.127426,
+      "lon_deg": 297.396436
+     },
+     "upper_right": {
+      "lat_deg": 88.196589,
+      "lon_deg": 278.561898
+     },
+     "lower_left": {
+      "lat_deg": 61.321295,
+      "lon_deg": 100.274066
+     },
+     "lower_right": {
+      "lat_deg": 61.327043,
+      "lon_deg": 101.645276
+     }
+    },
+    "center": {
+     "lat_deg": 74.74308825,
+     "lon_deg": 194.46941899999996
+    },
+    "sun": {
+     "sun_azimuth_deg": 192.258405,
+     "sun_elevation_deg": 13.240108
+    },
+    "start_time": "2023-05-28T09:20:29.5359Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230528T1316295098_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230528T1316295098_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-28T13:16:29.5098Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T1316295098_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T1316295098_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.147108,
+      "lon_deg": 296.317902
+     },
+     "upper_right": {
+      "lat_deg": 88.22678,
+      "lon_deg": 277.40347
+     },
+     "lower_left": {
+      "lat_deg": 31.729074,
+      "lon_deg": 98.527918
+     },
+     "lower_right": {
+      "lat_deg": 31.733331,
+      "lon_deg": 99.368999
+     }
+    },
+    "center": {
+     "lat_deg": 59.95907325,
+     "lon_deg": 192.90457225
+    },
+    "sun": {
+     "sun_azimuth_deg": 201.768809,
+     "sun_elevation_deg": 26.497613
+    },
+    "start_time": "2023-05-28T13:16:29.5098Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230528T1514296363_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230528T1514296363_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-28T15:14:29.6363Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T1514296363_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T1514296363_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.183962,
+      "lon_deg": 296.141075
+     },
+     "upper_right": {
+      "lat_deg": 88.271106,
+      "lon_deg": 276.87522
+     },
+     "lower_left": {
+      "lat_deg": 61.861228,
+      "lon_deg": 96.930756
+     },
+     "lower_right": {
+      "lat_deg": 61.868194,
+      "lon_deg": 98.319132
+     }
+    },
+    "center": {
+     "lat_deg": 75.0461225,
+     "lon_deg": 192.06654575
+    },
+    "sun": {
+     "sun_azimuth_deg": 191.900067,
+     "sun_elevation_deg": 13.073466
+    },
+    "start_time": "2023-05-28T15:14:29.6363Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230528T0722305575_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20230528T0722305575_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-05-28T07:22:30.5575Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T0722305575_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230528T0722305575_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.136634,
+      "lon_deg": 297.867196
+     },
+     "upper_right": {
+      "lat_deg": 88.198721,
+      "lon_deg": 278.87649
+     },
+     "lower_left": {
+      "lat_deg": 30.1309,
+      "lon_deg": 101.809355
+     },
+     "lower_right": {
+      "lat_deg": 30.134502,
+      "lon_deg": 102.637837
+     }
+    },
+    "center": {
+     "lat_deg": 59.15018925,
+     "lon_deg": 195.2977195
+    },
+    "sun": {
+     "sun_azimuth_deg": 202.565544,
+     "sun_elevation_deg": 27.078148
+    },
+    "start_time": "2023-05-28T07:22:30.5575Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230725T0518415772_d_dtm_n18": {
+   "product_id": "ch2_tmc_ndn_20230725T0518415772_d_dtm_n18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-07-25T05:18:41.5772Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230725T0518415772_d_dtm_n18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230725T0518415772_d_dtm_n18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.712799,
+      "lon_deg": 225.143576
+     },
+     "upper_right": {
+      "lat_deg": 88.729651,
+      "lon_deg": 251.37648
+     },
+     "lower_left": {
+      "lat_deg": 55.335921,
+      "lon_deg": 60.33021
+     },
+     "lower_right": {
+      "lat_deg": 55.335915,
+      "lon_deg": 59.170015
+     }
+    },
+    "center": {
+     "lat_deg": 72.0285715,
+     "lon_deg": 149.00507025
+    },
+    "sun": {
+     "sun_azimuth_deg": 153.701267,
+     "sun_elevation_deg": 15.707258
+    },
+    "start_time": "2023-07-25T05:18:41.5772Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20230731T1540062646_d_dtm_n18": {
+   "product_id": "ch2_tmc_ndn_20230731T1540062646_d_dtm_n18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-07-31T15:40:06.2646Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230731T1540062646_d_dtm_n18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20230731T1540062646_d_dtm_n18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": 88.466162,
+      "lon_deg": 102.094582
+     },
+     "upper_right": {
+      "lat_deg": 88.940827,
+      "lon_deg": 125.716453
+     },
+     "lower_left": {
+      "lat_deg": 58.031097,
+      "lon_deg": 337.022461
+     },
+     "lower_right": {
+      "lat_deg": 58.051377,
+      "lon_deg": 335.643956
+     }
+    },
+    "center": {
+     "lat_deg": 73.37236575,
+     "lon_deg": 225.119363
+    },
+    "sun": {
+     "sun_azimuth_deg": 151.254382,
+     "sun_elevation_deg": 14.185775
+    },
+    "start_time": "2023-07-31T15:40:06.2646Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-24T08:32:33.9656Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231024T0832339656_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231024T0832339656_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.636143,
+      "lon_deg": 286.370321
+     },
+     "upper_right": {
+      "lat_deg": -87.698422,
+      "lon_deg": 301.659995
+     },
+     "lower_left": {
+      "lat_deg": -60.342689,
+      "lon_deg": 120.69748
+     },
+     "lower_right": {
+      "lat_deg": -60.348651,
+      "lon_deg": 119.453236
+     }
+    },
+    "center": {
+     "lat_deg": -74.00647625,
+     "lon_deg": 207.045258
+    },
+    "sun": {
+     "sun_azimuth_deg": 283.721311,
+     "sun_elevation_deg": 6.502995
+    },
+    "start_time": "2023-10-24T08:32:33.9656Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20220110T0956254489_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20220110T0956254489_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2022-01-10T09:56:25.4489Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220110T0956254489_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220110T0956254489_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -75.077181,
+      "lon_deg": 251.093426
+     },
+     "upper_right": {
+      "lat_deg": -75.043456,
+      "lon_deg": 253.651141
+     },
+     "lower_left": {
+      "lat_deg": -58.963167,
+      "lon_deg": 68.818638
+     },
+     "lower_right": {
+      "lat_deg": -58.94869,
+      "lon_deg": 67.638269
+     }
+    },
+    "center": {
+     "lat_deg": -67.0081235,
+     "lon_deg": 160.3003685
+    },
+    "sun": {
+     "sun_azimuth_deg": 79.221433,
+     "sun_elevation_deg": 8.531187
+    },
+    "start_time": "2022-01-10T09:56:25.4489Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20220110T1352097832_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20220110T1352097832_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2022-01-10T13:52:09.7832Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220110T1352097832_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220110T1352097832_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -75.142205,
+      "lon_deg": 248.81894
+     },
+     "upper_right": {
+      "lat_deg": -75.110076,
+      "lon_deg": 251.3631
+     },
+     "lower_left": {
+      "lat_deg": -58.99585,
+      "lon_deg": 66.687271
+     },
+     "lower_right": {
+      "lat_deg": -58.982264,
+      "lon_deg": 65.525935
+     }
+    },
+    "center": {
+     "lat_deg": -67.05759875,
+     "lon_deg": 158.0988115
+    },
+    "sun": {
+     "sun_azimuth_deg": 79.276252,
+     "sun_elevation_deg": 8.544648
+    },
+    "start_time": "2022-01-10T13:52:09.7832Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20220109T1219587048_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20220109T1219587048_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2022-01-09T12:19:58.7048Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T1219587048_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T1219587048_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -75.041584,
+      "lon_deg": 263.571373
+     },
+     "upper_right": {
+      "lat_deg": -75.001112,
+      "lon_deg": 266.120256
+     },
+     "lower_left": {
+      "lat_deg": -58.95217,
+      "lon_deg": 80.49054
+     },
+     "lower_right": {
+      "lat_deg": -58.934091,
+      "lon_deg": 79.282146
+     }
+    },
+    "center": {
+     "lat_deg": -66.98223925,
+     "lon_deg": 172.36607874999999
+    },
+    "sun": {
+     "sun_azimuth_deg": 78.391902,
+     "sun_elevation_deg": 8.522056
+    },
+    "start_time": "2022-01-09T12:19:58.7048Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20220109T1022082458_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20220109T1022082458_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2022-01-09T10:22:08.2458Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T1022082458_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T1022082458_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -75.088731,
+      "lon_deg": 264.663162
+     },
+     "upper_right": {
+      "lat_deg": -75.048176,
+      "lon_deg": 267.215219
+     },
+     "lower_left": {
+      "lat_deg": -59.005388,
+      "lon_deg": 81.567605
+     },
+     "lower_right": {
+      "lat_deg": -58.987287,
+      "lon_deg": 80.356907
+     }
+    },
+    "center": {
+     "lat_deg": -67.0323955,
+     "lon_deg": 173.45072324999998
+    },
+    "sun": {
+     "sun_azimuth_deg": 78.227183,
+     "sun_elevation_deg": 8.528231
+    },
+    "start_time": "2022-01-09T10:22:08.2458Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20220110T1154169263_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20220110T1154169263_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2022-01-10T11:54:16.9263Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220110T1154169263_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220110T1154169263_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -75.073441,
+      "lon_deg": 249.95237
+     },
+     "upper_right": {
+      "lat_deg": -75.040591,
+      "lon_deg": 252.49793
+     },
+     "lower_left": {
+      "lat_deg": -58.985832,
+      "lon_deg": 67.753531
+     },
+     "lower_right": {
+      "lat_deg": -58.971784,
+      "lon_deg": 66.582247
+     }
+    },
+    "center": {
+     "lat_deg": -67.01791200000001,
+     "lon_deg": 159.19651949999997
+    },
+    "sun": {
+     "sun_azimuth_deg": 79.306371,
+     "sun_elevation_deg": 8.533953
+    },
+    "start_time": "2022-01-10T11:54:16.9263Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20220109T1615439830_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20220109T1615439830_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2022-01-09T16:15:43.9830Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T1615439830_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T1615439830_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -75.149648,
+      "lon_deg": 261.388792
+     },
+     "upper_right": {
+      "lat_deg": -75.109134,
+      "lon_deg": 263.963787
+     },
+     "lower_left": {
+      "lat_deg": -59.002988,
+      "lon_deg": 78.339729
+     },
+     "lower_right": {
+      "lat_deg": -58.985084,
+      "lon_deg": 77.129972
+     }
+    },
+    "center": {
+     "lat_deg": -67.0617135,
+     "lon_deg": 170.20557000000002
+    },
+    "sun": {
+     "sun_azimuth_deg": 78.356292,
+     "sun_elevation_deg": 8.542922
+    },
+    "start_time": "2022-01-09T16:15:43.9830Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20220109T0824167590_d_dtm_d32": {
+   "product_id": "ch2_tmc_ndn_20220109T0824167590_d_dtm_d32",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2022-01-09T08:24:16.7590Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T0824167590_d_dtm_d32",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20220109T0824167590_d_dtm_d32\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -75.085399,
+      "lon_deg": 265.741137
+     },
+     "upper_right": {
+      "lat_deg": -75.04494,
+      "lon_deg": 268.288522
+     },
+     "lower_left": {
+      "lat_deg": -59.000202,
+      "lon_deg": 82.647548
+     },
+     "lower_right": {
+      "lat_deg": -58.982112,
+      "lon_deg": 81.436346
+     }
+    },
+    "center": {
+     "lat_deg": -67.02816325,
+     "lon_deg": 174.52838825
+    },
+    "sun": {
+     "sun_azimuth_deg": 78.14157,
+     "sun_elevation_deg": 8.533011
+    },
+    "start_time": "2022-01-09T08:24:16.7590Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20211117T1110241429_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20211117T1110241429_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2021-11-17T11:10:24.1429Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20211117T1110241429_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20211117T1110241429_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.379424,
+      "lon_deg": 263.317453
+     },
+     "upper_right": {
+      "lat_deg": -87.557751,
+      "lon_deg": 248.86279
+     },
+     "lower_left": {
+      "lat_deg": -61.246833,
+      "lon_deg": 58.648919
+     },
+     "lower_right": {
+      "lat_deg": -61.26176,
+      "lon_deg": 59.969426
+     }
+    },
+    "center": {
+     "lat_deg": -74.361442,
+     "lon_deg": 157.699647
+    },
+    "sun": {
+     "sun_azimuth_deg": 300.659569,
+     "sun_elevation_deg": 10.781318
+    },
+    "start_time": "2021-11-17T11:10:24.1429Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18_Bundle (1).tar"
+  },
+  "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-24T12:28:34.6956Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231024T1228346956_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231024T1228346956_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.603483,
+      "lon_deg": 285.574649
+     },
+     "upper_right": {
+      "lat_deg": -87.652172,
+      "lon_deg": 300.665736
+     },
+     "lower_left": {
+      "lat_deg": -60.339192,
+      "lon_deg": 118.469281
+     },
+     "lower_right": {
+      "lat_deg": -60.344109,
+      "lon_deg": 117.224595
+     }
+    },
+    "center": {
+     "lat_deg": -73.98473899999999,
+     "lon_deg": 205.48356525000003
+    },
+    "sun": {
+     "sun_azimuth_deg": 283.85693,
+     "sun_elevation_deg": 6.570464
+    },
+    "start_time": "2023-10-24T12:28:34.6956Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231024T1624371836_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231024T1624371836_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-24T16:24:37.1836Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231024T1624371836_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231024T1624371836_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.65357,
+      "lon_deg": 284.238068
+     },
+     "upper_right": {
+      "lat_deg": -87.691602,
+      "lon_deg": 299.674736
+     },
+     "lower_left": {
+      "lat_deg": -60.408554,
+      "lon_deg": 116.251779
+     },
+     "lower_right": {
+      "lat_deg": -60.41254,
+      "lon_deg": 115.00278
+     }
+    },
+    "center": {
+     "lat_deg": -74.0415665,
+     "lon_deg": 203.79184075
+    },
+    "sun": {
+     "sun_azimuth_deg": 284.37791,
+     "sun_elevation_deg": 6.637774
+    },
+    "start_time": "2023-10-24T16:24:37.1836Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231025T1956513800_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231025T1956513800_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-25T19:56:51.3800Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231025T1956513800_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231025T1956513800_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.747458,
+      "lon_deg": 272.964934
+     },
+     "upper_right": {
+      "lat_deg": -87.743208,
+      "lon_deg": 288.51948
+     },
+     "lower_left": {
+      "lat_deg": -60.40978,
+      "lon_deg": 100.896992
+     },
+     "lower_right": {
+      "lat_deg": -60.41019,
+      "lon_deg": 99.688613
+     }
+    },
+    "center": {
+     "lat_deg": -74.077659,
+     "lon_deg": 190.51750475
+    },
+    "sun": {
+     "sun_azimuth_deg": 286.401572,
+     "sun_elevation_deg": 7.050806
+    },
+    "start_time": "2023-10-25T19:56:51.3800Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231026T0943001971_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231026T0943001971_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-26T09:43:00.1971Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231026T0943001971_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231026T0943001971_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.77833,
+      "lon_deg": 267.353177
+     },
+     "upper_right": {
+      "lat_deg": -87.753534,
+      "lon_deg": 282.863635
+     },
+     "lower_left": {
+      "lat_deg": -60.276954,
+      "lon_deg": 93.177507
+     },
+     "lower_right": {
+      "lat_deg": -60.275783,
+      "lon_deg": 91.999057
+     }
+    },
+    "center": {
+     "lat_deg": -74.02115024999999,
+     "lon_deg": 183.848344
+    },
+    "sun": {
+     "sun_azimuth_deg": 286.950001,
+     "sun_elevation_deg": 7.292112
+    },
+    "start_time": "2023-10-26T09:43:00.1971Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231026T1339018616_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231026T1339018616_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-26T13:39:01.8616Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231026T1339018616_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231026T1339018616_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.680095,
+      "lon_deg": 265.253912
+     },
+     "upper_right": {
+      "lat_deg": -87.657983,
+      "lon_deg": 280.140627
+     },
+     "lower_left": {
+      "lat_deg": -60.373444,
+      "lon_deg": 91.031931
+     },
+     "lower_right": {
+      "lat_deg": -60.372397,
+      "lon_deg": 89.851842
+     }
+    },
+    "center": {
+     "lat_deg": -74.02097975,
+     "lon_deg": 181.569578
+    },
+    "sun": {
+     "sun_azimuth_deg": 286.722982,
+     "sun_elevation_deg": 7.289902
+    },
+    "start_time": "2023-10-26T13:39:01.8616Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231026T1735025409_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231026T1735025409_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-26T17:35:02.5409Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231026T1735025409_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231026T1735025409_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.627734,
+      "lon_deg": 263.045045
+     },
+     "upper_right": {
+      "lat_deg": -87.607707,
+      "lon_deg": 277.644599
+     },
+     "lower_left": {
+      "lat_deg": -60.38161,
+      "lon_deg": 88.889697
+     },
+     "lower_right": {
+      "lat_deg": -60.380728,
+      "lon_deg": 87.710954
+     }
+    },
+    "center": {
+     "lat_deg": -73.99944475,
+     "lon_deg": 179.32257375
+    },
+    "sun": {
+     "sun_azimuth_deg": 286.496433,
+     "sun_elevation_deg": 7.304516
+    },
+    "start_time": "2023-10-26T17:35:02.5409Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231027T1315134884_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231027T1315134884_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-27T13:15:13.4884Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231027T1315134884_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231027T1315134884_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.577517,
+      "lon_deg": 251.763755
+     },
+     "upper_right": {
+      "lat_deg": -87.563211,
+      "lon_deg": 266.239169
+     },
+     "lower_left": {
+      "lat_deg": -60.435708,
+      "lon_deg": 78.132695
+     },
+     "lower_right": {
+      "lat_deg": -60.435292,
+      "lon_deg": 76.955779
+     }
+    },
+    "center": {
+     "lat_deg": -74.002932,
+     "lon_deg": 168.2728495
+    },
+    "sun": {
+     "sun_azimuth_deg": 287.195381,
+     "sun_elevation_deg": 7.451246
+    },
+    "start_time": "2023-10-27T13:15:13.4884Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231027T1711146475_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231027T1711146475_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-27T17:11:14.6475Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231027T1711146475_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231027T1711146475_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.537645,
+      "lon_deg": 248.8937
+     },
+     "upper_right": {
+      "lat_deg": -87.531914,
+      "lon_deg": 263.184726
+     },
+     "lower_left": {
+      "lat_deg": -60.479897,
+      "lon_deg": 76.027758
+     },
+     "lower_right": {
+      "lat_deg": -60.480193,
+      "lon_deg": 74.850028
+     }
+    },
+    "center": {
+     "lat_deg": -74.00741225,
+     "lon_deg": 165.73905299999998
+    },
+    "sun": {
+     "sun_azimuth_deg": 287.119557,
+     "sun_elevation_deg": 7.435115
+    },
+    "start_time": "2023-10-27T17:11:14.6475Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231027T2107171839_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231027T2107171839_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-10-27T21:07:17.1839Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231027T2107171839_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231027T2107171839_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.561339,
+      "lon_deg": 245.763669
+     },
+     "upper_right": {
+      "lat_deg": -87.565211,
+      "lon_deg": 260.20349
+     },
+     "lower_left": {
+      "lat_deg": -60.43581,
+      "lon_deg": 73.926831
+     },
+     "lower_right": {
+      "lat_deg": -60.436894,
+      "lon_deg": 72.75538
+     }
+    },
+    "center": {
+     "lat_deg": -73.9998135,
+     "lon_deg": 163.16234250000002
+    },
+    "sun": {
+     "sun_azimuth_deg": 287.417511,
+     "sun_elevation_deg": 7.462501
+    },
+    "start_time": "2023-10-27T21:07:17.1839Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231109T0207531119_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231109T0207531119_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-09T02:07:53.1119Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231109T0207531119_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231109T0207531119_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.657669,
+      "lon_deg": 85.674526
+     },
+     "upper_right": {
+      "lat_deg": -87.637788,
+      "lon_deg": 102.001327
+     },
+     "lower_left": {
+      "lat_deg": -60.290879,
+      "lon_deg": 272.63212
+     },
+     "lower_right": {
+      "lat_deg": -60.290193,
+      "lon_deg": 271.390582
+     }
+    },
+    "center": {
+     "lat_deg": -73.96913225,
+     "lon_deg": 182.92463874999999
+    },
+    "sun": {
+     "sun_azimuth_deg": 300.053363,
+     "sun_elevation_deg": 10.271907
+    },
+    "start_time": "2023-11-09T02:07:53.1119Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-12-05T19:06:51.2971Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231205T1906512971_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231205T1906512971_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -78.739275,
+      "lon_deg": 101.766131
+     },
+     "upper_right": {
+      "lat_deg": -78.735425,
+      "lon_deg": 98.386093
+     },
+     "lower_left": {
+      "lat_deg": -66.312388,
+      "lon_deg": 279.846772
+     },
+     "lower_right": {
+      "lat_deg": -66.309813,
+      "lon_deg": 281.242906
+     }
+    },
+    "center": {
+     "lat_deg": -72.52422525,
+     "lon_deg": 190.3104755
+    },
+    "sun": {
+     "sun_azimuth_deg": 283.265337,
+     "sun_elevation_deg": 7.062617
+    },
+    "start_time": "2023-12-05T19:06:51.2971Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231112T0848143248_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231112T0848143248_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-12T08:48:14.3248Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231112T0848143248_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231112T0848143248_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.76201,
+      "lon_deg": 46.550636
+     },
+     "upper_right": {
+      "lat_deg": -87.688883,
+      "lon_deg": 63.99466
+     },
+     "lower_left": {
+      "lat_deg": -60.35913,
+      "lon_deg": 229.453503
+     },
+     "lower_right": {
+      "lat_deg": -60.357655,
+      "lon_deg": 228.223117
+     }
+    },
+    "center": {
+     "lat_deg": -74.0419195,
+     "lon_deg": 142.055479
+    },
+    "sun": {
+     "sun_azimuth_deg": 302.395729,
+     "sun_elevation_deg": 10.572836
+    },
+    "start_time": "2023-11-12T08:48:14.3248Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231108T0627443237_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231108T0627443237_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-08T06:27:44.3237Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231108T0627443237_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231108T0627443237_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.53636,
+      "lon_deg": 94.212798
+     },
+     "upper_right": {
+      "lat_deg": -87.548674,
+      "lon_deg": 109.545542
+     },
+     "lower_left": {
+      "lat_deg": -60.466607,
+      "lon_deg": 283.629141
+     },
+     "lower_right": {
+      "lat_deg": -60.468369,
+      "lon_deg": 282.381716
+     }
+    },
+    "center": {
+     "lat_deg": -74.0050025,
+     "lon_deg": 192.44229925
+    },
+    "sun": {
+     "sun_azimuth_deg": 298.893958,
+     "sun_elevation_deg": 9.94672
+    },
+    "start_time": "2023-11-08T06:27:44.3237Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231109T2148028796_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231109T2148028796_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-09T21:48:02.8796Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231109T2148028796_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231109T2148028796_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.740142,
+      "lon_deg": 74.687173
+     },
+     "upper_right": {
+      "lat_deg": -87.719744,
+      "lon_deg": 91.447135
+     },
+     "lower_left": {
+      "lat_deg": -60.361701,
+      "lon_deg": 261.796748
+     },
+     "lower_right": {
+      "lat_deg": -60.360394,
+      "lon_deg": 260.580316
+     }
+    },
+    "center": {
+     "lat_deg": -74.04549525,
+     "lon_deg": 172.12784299999998
+    },
+    "sun": {
+     "sun_azimuth_deg": 301.21032,
+     "sun_elevation_deg": 10.433386
+    },
+    "start_time": "2023-11-09T21:48:02.8796Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231109T0603567692_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231109T0603567692_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-09T06:03:56.7692Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231109T0603567692_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231109T0603567692_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.751893,
+      "lon_deg": 83.203496
+     },
+     "upper_right": {
+      "lat_deg": -87.731931,
+      "lon_deg": 100.164986
+     },
+     "lower_left": {
+      "lat_deg": -60.339438,
+      "lon_deg": 270.469442
+     },
+     "lower_right": {
+      "lat_deg": -60.338792,
+      "lon_deg": 269.232231
+     }
+    },
+    "center": {
+     "lat_deg": -74.0405135,
+     "lon_deg": 180.76753875000003
+    },
+    "sun": {
+     "sun_azimuth_deg": 300.70525,
+     "sun_elevation_deg": 10.318362
+    },
+    "start_time": "2023-11-09T06:03:56.7692Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231106T1903368442_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231106T1903368442_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-06T19:03:36.8442Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231106T1903368442_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231106T1903368442_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.565375,
+      "lon_deg": 106.591795
+     },
+     "upper_right": {
+      "lat_deg": -87.658266,
+      "lon_deg": 122.121766
+     },
+     "lower_left": {
+      "lat_deg": -60.359667,
+      "lon_deg": 303.671074
+     },
+     "lower_right": {
+      "lat_deg": -60.367968,
+      "lon_deg": 302.421379
+     }
+    },
+    "center": {
+     "lat_deg": -73.987819,
+     "lon_deg": 208.7015035
+    },
+    "sun": {
+     "sun_azimuth_deg": 296.600587,
+     "sun_elevation_deg": 9.505747
+    },
+    "start_time": "2023-11-06T19:03:36.8442Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231106T2259374129_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231106T2259374129_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-06T22:59:37.4129Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231106T2259374129_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231106T2259374129_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.58638,
+      "lon_deg": 105.842467
+     },
+     "upper_right": {
+      "lat_deg": -87.662322,
+      "lon_deg": 121.481962
+     },
+     "lower_left": {
+      "lat_deg": -62.817068,
+      "lon_deg": 301.501698
+     },
+     "lower_right": {
+      "lat_deg": -62.824466,
+      "lon_deg": 300.148099
+     }
+    },
+    "center": {
+     "lat_deg": -75.222559,
+     "lon_deg": 207.2435565
+    },
+    "sun": {
+     "sun_azimuth_deg": 296.099205,
+     "sun_elevation_deg": 8.78364
+    },
+    "start_time": "2023-11-06T22:59:37.4129Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231106T0319424961_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231106T0319424961_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-06T03:19:42.4961Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231106T0319424961_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231106T0319424961_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.648275,
+      "lon_deg": 107.805523
+     },
+     "upper_right": {
+      "lat_deg": -87.824138,
+      "lon_deg": 124.041566
+     },
+     "lower_left": {
+      "lat_deg": -60.356167,
+      "lon_deg": 312.820894
+     },
+     "lower_right": {
+      "lat_deg": -60.370368,
+      "lon_deg": 311.544662
+     }
+    },
+    "center": {
+     "lat_deg": -74.04973700000001,
+     "lon_deg": 214.05316125000002
+    },
+    "sun": {
+     "sun_azimuth_deg": 295.623303,
+     "sun_elevation_deg": 9.237289
+    },
+    "start_time": "2023-11-06T03:19:42.4961Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231105T0344013627_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231105T0344013627_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-05T03:44:01.3627Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231105T0344013627_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231105T0344013627_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.646737,
+      "lon_deg": 112.685218
+     },
+     "upper_right": {
+      "lat_deg": -87.92235,
+      "lon_deg": 129.105234
+     },
+     "lower_left": {
+      "lat_deg": -60.21694,
+      "lon_deg": 326.394277
+     },
+     "lower_right": {
+      "lat_deg": -60.238269,
+      "lon_deg": 325.070456
+     }
+    },
+    "center": {
+     "lat_deg": -74.006074,
+     "lon_deg": 223.31379625
+    },
+    "sun": {
+     "sun_azimuth_deg": 294.076614,
+     "sun_elevation_deg": 8.898474
+    },
+    "start_time": "2023-11-05T03:44:01.3627Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  },
+  "ch2_tmc_ndn_20231108T0231435992_d_dtm_d18": {
+   "product_id": "ch2_tmc_ndn_20231108T0231435992_d_dtm_d18",
+   "mission": "Chandrayaan-2",
+   "instrument": "terrain mapping camera",
+   "product_kind": "DTM (derived)",
+   "start_time": "2023-11-08T02:31:43.5992Z",
+   "cache_dir": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231108T0231435992_d_dtm_d18",
+   "browse_png": "c:\\Users\\user\\Downloads\\SIH\\data\\reference\\tmc\\ch2_tmc_ndn_20231108T0231435992_d_dtm_d18\\browse.png",
+   "geometry": {
+    "footprint_corners": {
+     "upper_left": {
+      "lat_deg": -87.541024,
+      "lon_deg": 96.193949
+     },
+     "upper_right": {
+      "lat_deg": -87.555711,
+      "lon_deg": 111.468343
+     },
+     "lower_left": {
+      "lat_deg": -60.49091,
+      "lon_deg": 285.809349
+     },
+     "lower_right": {
+      "lat_deg": -60.492872,
+      "lon_deg": 284.564703
+     }
+    },
+    "center": {
+     "lat_deg": -74.02012925,
+     "lon_deg": 194.509086
+    },
+    "sun": {
+     "sun_azimuth_deg": 298.710182,
+     "sun_elevation_deg": 9.90296
+    },
+    "start_time": "2023-11-08T02:31:43.5992Z",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera"
+   },
+   "source": "ch2_tmc_ndn_20231205T1906512971_d_dtm_d18_Bundle.tar"
+  }
+ },
+ "warnings": []
+}

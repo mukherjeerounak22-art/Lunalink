@@ -169,9 +169,58 @@ def auto_select_reference(img, max_candidates=None, min_ncc=0.35):
                               "simulated second pass generated" % exc}
 
 
+def auto_select_isro_references(img, src_center=None, scene_dir=None):
+    """The ISRO counterpart of the NASA LRO NAC auto-selection: rank the
+    TMC/TMC-2 DTM library AND the IIRS library against this source patch
+    (footprint proximity + coarse NCC, best-first), register the nearest
+    product of each instrument onto the source grid and save it as
+    reference_tmc.png / reference_iirs.png inside the scene dir.  Every
+    instrument is attempted independently - a missing/empty library
+    degrades to an honest note, never an error."""
+    out = {}
+    img_u8 = np.clip(img, 0, 255).astype(np.uint8)
+    for key in ("tmc", "iirs"):
+        try:
+            mod = __import__(key)
+            prods = mod.all_products()
+            if not prods:
+                out[key] = {
+                    "status": "empty",
+                    "note": "%s library empty - %s data not on disk yet; "
+                            "the selection runs automatically the moment a "
+                            "product is placed in data/raw or a bundle tar "
+                            "is dropped at the repo root"
+                            % ("TMC/TMC-2" if key == "tmc" else "IIRS",
+                               "TMC-2" if key == "tmc" else "IIRS"),
+                }
+                continue
+            cands = mod.select_best(img_u8, prods, src_center)
+            ranked = [{"product_id": p["product_id"],
+                       "mission": p.get("mission"),
+                       "instrument": p.get("instrument"),
+                       "footprint_km": c.get("footprint_km"),
+                       "coarse_ncc": c.get("coarse_ncc"),
+                       "score": round(float(s), 3)}
+                      for p, c, s in cands[:5]]
+            best_prod, best_cand, _ = cands[0]
+            region, meta = mod.build_reference(img_u8, best_prod, best_cand)
+            if region is None:
+                out[key] = {"status": "unavailable", "ranked": ranked,
+                            "note": meta.get("error",
+                                             "reference could not be built")}
+                continue
+            if scene_dir:
+                save_png(region, os.path.join(
+                    scene_dir, "reference_%s.png" % key))
+            out[key] = {"status": "selected", "ranked": ranked, **meta}
+        except Exception as exc:                             # noqa: BLE001
+            out[key] = {"status": "error", "note": str(exc)[:160]}
+    return out
+
+
 def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
                  provenance="", product_id=None, geo=None, gsd_note=None,
-                 auto_ref=True):
+                 auto_ref=True, src_center=None):
     """Run the full scene chain on an arbitrary 8-bit image:
     SFS DEM -> craters/shadows -> save + register. Returns scene entry."""
     img = np.clip(img_u8, 0, 255).astype(np.float32)
@@ -219,6 +268,44 @@ def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
     save_png(ref, os.path.join(scene_dir, "reference.png"))
     np.save(os.path.join(scene_dir, "dem.npy"), dem.astype(np.float32))
 
+    # multi-instrument ISRO selection alongside the NASA reference:
+    # nearest TMC/TMC-2 DTM product + nearest IIRS product, each ranked
+    # (footprint proximity + coarse NCC), registered and saved for the UI
+    if auto_ref:
+        try:
+            isro = auto_select_isro_references(img, src_center,
+                                               scene_dir=scene_dir)
+            for key in ("tmc", "iirs"):
+                info = isro.get(key, {})
+                if info.get("status") == "selected":
+                    meta["%s_reference" % key] = {
+                        k: v for k, v in info.items() if k != "ranked"}
+                    meta["%s_reference_ranked" % key] = \
+                        info.get("ranked", [])
+                else:
+                    meta["%s_reference" % key] = {
+                        "status": info.get("status", "unavailable"),
+                        "note": info.get("note", "")}
+            summary_bits = []
+            for key, label in (("tmc", "TMC-2"), ("iirs", "IIRS")):
+                info = isro.get(key, {})
+                if info.get("status") == "selected":
+                    km = info.get("footprint_km")
+                    summary_bits.append(
+                        "nearest %s product %s%s (auto-selected)"
+                        % (label, info.get("product_id", "?"),
+                           ", %.0f km away" % km if km is not None else ""))
+                elif info.get("status") == "empty":
+                    summary_bits.append("%s: no data uploaded yet" % label)
+            meta["multi_instrument_summary"] = (
+                "NASA LRO NAC reference %s; ISRO cross-instrument: %s."
+                % ("auto-selected" if ref is not None
+                   else "simulated second pass",
+                   "; ".join(summary_bits) or "none"))
+        except Exception as exc:                             # noqa: BLE001
+            meta["multi_instrument_summary"] = (
+                "ISRO cross-instrument selection skipped: %s" % exc)
+
     craters = detect_craters(img, cell_m, sun, (0, 0), meta)
     meta["craters_detected"] = len(craters)
     with open(os.path.join(scene_dir, "craters.json"), "w") as f:
@@ -241,35 +328,85 @@ def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
 
 def ingest_product_dir(product_dir, scene_id=None, crop=None, crop_size=4096,
                        sun_az=270.8, sun_el=10.0):
-    """Ingest a Chandrayaan-2 PDS4 product directory (XML + IMG).
-    `crop` = (line, sample) origin in full-res pixels; None = auto-pick the
-    best-variance window anywhere in the product. Judges can point at ANY
-    product and ANY region of it."""
-    # find the label
+    """Ingest a Chandrayaan-2 PDS4 product directory (XML + IMG, or a
+    TMC-style XML + GeoTIFF DTM with browse PNG).  `crop` = (line, sample)
+    origin in full-res pixels; None = auto-pick the best-variance window
+    anywhere in the product. Judges can point at ANY product and ANY region
+    of it.  OHRC / TMC-2 / IIRS labels all parse here: ISDA footprint and
+    sun geometry drive the physics, and the source footprint center feeds
+    the multi-instrument nearest-reference selection."""
+    import tmc as tmc_mod
+    # find the label: XML paired with .img (OHRC/IIRS raw) OR .tif/.tiff
+    # (TMC DTM) in the same directory - browse/miscellaneous dirs skipped
     xml_path = None
-    for root, _, files in os.walk(product_dir):
-        for fn in files:
-            if fn.lower().endswith(".xml") and \
-                    any(f.lower().endswith((".img",)) for f in files):
+    for root, dirs, files in os.walk(product_dir):
+        dirs[:] = [d for d in dirs if d.lower() not in
+                   ("browse", "miscellaneous")]
+        for fn in sorted(files):
+            if fn.lower().endswith(".xml") and any(
+                    f.lower().endswith((".img", ".tif", ".tiff"))
+                    for f in files):
                 xml_path = os.path.join(root, fn)
                 break
         if xml_path:
             break
     if not xml_path:
-        raise FileNotFoundError("no PDS4 label (.xml) with .IMG in "
+        # last resort: a browse-PNG-only product directory
+        for root, dirs, files in os.walk(product_dir):
+            for fn in sorted(files):
+                if fn.lower().endswith(".png"):
+                    return _ingest_browse_png(
+                        os.path.join(root, fn), product_dir, scene_id,
+                        sun_az, sun_el)
+        raise FileNotFoundError("no PDS4 label (.xml) with .IMG/.TIF in "
                                 + product_dir)
     lab = _read_product(xml_path)
-    if lab["lines"] == 0 or lab["samples"] == 0:
-        raise ValueError("label lacks Line/Sample dimensions")
-    if lab["dtype"] is None:
-        raise ValueError("unsupported data_type in label")
+    geo = {}
+    try:
+        geo = tmc_mod.parse_isda_geometry(
+            open(xml_path, encoding="utf-8", errors="replace").read())
+    except Exception:                                        # noqa: BLE001
+        geo = {}
+    # ISRO labels carry the real sun geometry - use it unless the caller
+    # pinned specific values away from the defaults
+    if geo.get("sun") and (sun_az, sun_el) == (270.8, 10.0):
+        sun_az = geo["sun"]["sun_azimuth_deg"]
+        sun_el = geo["sun"]["sun_elevation_deg"]
+    src_center = geo.get("center")
 
-    mm = np.memmap(lab["img_path"], dtype=lab["dtype"], mode="r",
-                   offset=lab["offset"],
-                   shape=(lab["lines"], lab["samples"]))
-    full = np.asarray(mm, dtype=np.float32)
-    if lab["missing"] is not None:
-        full[full == float(lab["missing"])] = np.nan
+    read_note = None
+    if lab["lines"] and lab["dtype"] and os.path.exists(lab["img_path"]) \
+            and lab["img_path"].lower().endswith(".img"):
+        mm = np.memmap(lab["img_path"], dtype=lab["dtype"], mode="r",
+                       offset=lab["offset"],
+                       shape=(lab["lines"], lab["samples"]))
+        full = np.asarray(mm, dtype=np.float32)
+        if lab["missing"] is not None:
+            full[full == float(lab["missing"])] = np.nan
+    else:
+        # GeoTIFF (TMC DTM) or non-memmappable raster: try OpenCV, then the
+        # browse PNG as an honest fallback - provenance always states it
+        arr = cv2.imread(lab["img_path"], cv2.IMREAD_GRAYSCALE) \
+            if os.path.exists(lab["img_path"]) else None
+        if arr is None:
+            browse = None
+            for root, dirs, files in os.walk(os.path.dirname(xml_path)):
+                for fn in sorted(files):
+                    if fn.lower().endswith(".png"):
+                        browse = os.path.join(root, fn)
+                        break
+                if browse:
+                    break
+            if browse is None:
+                raise ValueError("raster %s could not be read and no browse "
+                                 "PNG exists" % lab["img_path"])
+            arr = cv2.imread(browse, cv2.IMREAD_GRAYSCALE)
+            read_note = "browse PNG (DTM shaded relief) as source - the " \
+                        "full GeoTIFF DTM is not readable here"
+        else:
+            read_note = "GeoTIFF read via OpenCV (8-bit normalize)"
+        full = arr.astype(np.float32)
+        lab["lines"], lab["samples"] = full.shape
 
     crop = crop or best_variance_window(np.nan_to_num(full, nan=0.0),
                                         crop_size)
@@ -289,16 +426,42 @@ def ingest_product_dir(product_dir, scene_id=None, crop=None, crop_size=4096,
         os.path.basename(product_dir)[:24], r0, c0))
     sid = re.sub(r"[^A-Za-z0-9_-]", "_", sid)[:60]
 
+    prov = ("Dynamically ingested PDS4 product %s; crop origin "
+            "(line %d, sample %d), %d px window. Relief is a "
+            "photometric approximation (non-metric)."
+            % (os.path.basename(lab["img_path"]), r0, c0, crop_size))
+    if read_note:
+        prov += " Source raster note: %s." % read_note
     res = ingest_image(
         I, sid, cell_m=cell_m, sun_az=sun_az, sun_el=sun_el,
-        provenance=("Dynamically ingested PDS4 product %s; crop origin "
-                    "(line %d, sample %d), %d px window. Relief is a "
-                    "photometric approximation (non-metric)."
-                    % (os.path.basename(lab["img_path"]), r0, c0,
-                       crop_size)),
+        provenance=prov,
         product_id=os.path.basename(lab["img_path"]),
-        gsd_note=gsd_note)
+        gsd_note=gsd_note, src_center=src_center)
     res["crop_origin_full"] = [int(r0), int(c0)]
     res["label"] = {k: lab[k] for k in ("lines", "samples", "offset",
                                         "dtype", "start_time")}
+    if geo:
+        res["geometry"] = {k: geo[k] for k in geo
+                           if k in ("footprint_corners", "center", "sun",
+                                    "mission", "instrument")}
     return res
+
+
+def _ingest_browse_png(png_path, product_dir, scene_id, sun_az, sun_el):
+    """Browse-PNG-only ingestion (product folder without a readable raster):
+    the shaded-relief browse becomes the analysis source, honestly labeled."""
+    img = cv2.imread(png_path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        raise ValueError("browse PNG unreadable: %s" % png_path)
+    sid = scene_id or ("ingest_browse_%s" %
+                       re.sub(r"[^A-Za-z0-9_-]", "_",
+                              os.path.basename(png_path))[:40])
+    sid = re.sub(r"[^A-Za-z0-9_-]", "_", sid)[:60]
+    return ingest_image(
+        cv2.resize(img, (1024, 1024), interpolation=cv2.INTER_AREA), sid,
+        cell_m=1.0, sun_az=sun_az, sun_el=sun_el,
+        provenance="Ingested from the product's browse PNG (shaded-relief "
+                   "preview) %s - full-resolution raster not available; "
+                   "relief is a photometric approximation (non-metric)."
+                   % os.path.basename(png_path),
+        product_id=os.path.basename(png_path))

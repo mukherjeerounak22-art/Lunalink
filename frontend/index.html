@@ -301,6 +301,7 @@ if (window.SENTRY_DSN_FRONTEND) {
         <select id="sceneSel" aria-label="Scene" disabled><option>loading…</option></select>
         <div id="sceneTags" style="margin-top:8px"></div>
         <button id="runBtn" style="margin-top:12px" disabled>▶ RUN MATCH</button>
+        <button id="syncUploadBtn" class="ghost" style="margin-top:8px" disabled>⇪ SYNC SCENE → 03 UPLOAD</button>
         <div id="sceneError" class="error-banner" role="alert"></div>
       </div>
 
@@ -359,6 +360,11 @@ if (window.SENTRY_DSN_FRONTEND) {
         </div>
       </div>
       <div class="panel muted">
+        <h2>Multi-instrument references <em>/ auto-selected per scene</em></h2>
+        <div id="refStrip" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:6px"></div>
+        <div class="mono-line" id="refStripNote" style="margin-top:8px"></div>
+      </div>
+      <div class="panel muted">
         <h2>Crater identification <em>/ Hough + shadow projection</em></h2>
         <div class="note" id="craterNote">Depth ≈ shadow length × tan(sun elevation);
         positions mapped to selenographic coordinates via the mission geometry file.</div>
@@ -378,6 +384,15 @@ if (window.SENTRY_DSN_FRONTEND) {
         <div id="hologram"></div>
         <div class="holo-overlay" id="holoSkel">BUILDING TERRAIN MESH…</div>
       </div>
+      <div id="layerBar" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
+        <button data-layer="sfs" class="ghost" style="border-color:#888">HEIGHT · SFS</button>
+        <button data-layer="tex" class="ghost" disabled>OPTICAL</button>
+        <button data-layer="metric" class="ghost" disabled>METRIC · TMC-2</button>
+        <button data-layer="minerals" class="ghost" disabled>MINERALS · IIRS</button>
+        <button data-layer="diff" class="ghost" disabled>SFS − METRIC</button>
+      </div>
+      <div class="mono-line" id="layerNote" style="margin-top:6px"></div>
+      <div id="mineralLegend" style="display:none; gap:14px; flex-wrap:wrap; margin-top:8px"></div>
       <div class="note" id="holoMeta"></div>
     </div>
   </div>
@@ -392,11 +407,12 @@ if (window.SENTRY_DSN_FRONTEND) {
         <div class="serif-display">From a single image to a 3D hologram</div>
         <div id="dropzone" class="dropzone" role="button" tabindex="0"
              aria-label="Upload an image — click or drop a file">
-          <b>Drop an image here</b>
-          or click to browse · JPG/PNG · max 25 MB<br>
-          <span class="mono-line">shape-from-shading → Fourier low-pass → holographic mesh</span>
+          <b>Drop an image or mission product here</b>
+          or click to browse · JPG/PNG image · OHRC / TMC-2 / IIRS product
+          (.xml+.img, .xml+.tif, .zip, .tar)<br>
+          <span class="mono-line">shape-from-shading → Fourier low-pass → holographic mesh · references auto-selected (NASA LRO NAC + nearest TMC-2 + IIRS)</span>
         </div>
-        <input type="file" id="fileInput" accept="image/*,.zip,.img,.IMG,.xml,.XML" class="visually-hidden">
+        <input type="file" id="fileInput" accept="image/*,.zip,.img,.IMG,.xml,.XML,.tar,.TAR,.tif,.TIF,.tiff" class="visually-hidden">
       </div>
       <div class="panel muted">
         <h2>Sun geometry <em>/ assumed for reconstruction</em></h2>
@@ -658,7 +674,44 @@ function renderMatch(m) {
   window.__matchSummary = "match " + pct.toFixed(1) + "% · " +
     (m.inlier_count ?? 0) + " inliers · RMSE " +
     (m.rmse_px != null ? (+m.rmse_px).toFixed(2) : "–") + " px";
+  /* multi-instrument reference strip (NASA + nearest TMC-2 + IIRS) */
+  window.__sceneSourceUrl = m.source_image;
+  window.__currentSceneName = m.scene_name || m.scene_id;
+  const sub = $("syncUploadBtn");
+  if (sub) sub.disabled = false;
+  loadRefStrip(m.scene_id);
   drawOverlays(m);
+}
+
+/* the auto-selected reference set for this scene, rendered as thumbnails */
+async function loadRefStrip(sceneId) {
+  const el = $("refStrip");
+  if (!el) return;
+  el.innerHTML = "<span class='skel' style='min-height:90px'></span>";
+  try {
+    const r = await fetchT(API + "/references/" + sceneId, null, 60000);
+    if (!r.ok) throw new Error("server responded " + r.status);
+    const j = await r.json();
+    el.innerHTML = j.references.map(ref => {
+      const img = ref.url
+        ? `<img src="${API}${ref.url}" alt="${ref.instrument}" loading="lazy"
+             style="width:100%;border-radius:8px;display:block;cursor:zoom-in"
+             onclick="window.open('${API}${ref.url}','_blank')">`
+        : `<div style="aspect-ratio:1;border:1px dashed #444;border-radius:8px;
+             display:flex;align-items:center;justify-content:center;
+             color:#666;font-size:11px;text-align:center;padding:6px">not available<br>for this scene</div>`;
+      const sub = ref.status === "selected"
+        ? ((ref.product_id || "auto-selected") +
+           (ref.footprint_km != null ? " · " + ref.footprint_km + " km" : ""))
+        : String(ref.note || ref.status || "").slice(0, 70);
+      return `<div><div class="img-cap">${ref.instrument}</div>${img}
+        <div class="mono-line" style="font-size:10px;margin-top:4px">${sub}</div></div>`;
+    }).join("");
+    $("refStripNote").textContent = j.summary || "";
+  } catch (e) {
+    el.innerHTML = "";
+    $("refStripNote").textContent = "reference strip unavailable: " + e.message;
+  }
 }
 
 async function drawOverlays(m) {
@@ -900,9 +953,10 @@ dz.addEventListener("drop", e => {
 });
 fi.addEventListener("change", () => { if (fi.files.length) routeUpload([...fi.files]); });
 /* plain image -> /analyze_upload (SFS); PDS4/PDS3 product (.xml+.img pair
-   or .zip of the product dir) -> /ingest_product_upload (full scene with
-   auto-selected reference from the LRO NAC library) */
-const isProduct = f => /\.(zip|img|xml)$/i.test(f.name || "");
+   or .zip of the product dir) or a TMC DTM / PRADAN bundle (.xml+.tif pair,
+   .zip, .tar) -> /ingest_product_upload (full scene with the auto-selected
+   NASA LRO NAC reference PLUS the nearest TMC-2 / IIRS products) */
+const isProduct = f => /\.(zip|img|xml|tar|tif|tiff)$/i.test(f.name || "");
 function routeUpload(files) {
   if (files.some(isProduct)) analyzeProduct(files); else analyze(files[0]);
 }
@@ -927,16 +981,34 @@ async function analyzeProduct(files) {
     lastFile = null;                       // scene already exists; no re-create
     renderHillshade(lastPayload);
     const g = lastPayload.grid, meta = lastPayload.metadata || {};
+    /* multi-instrument reference rows: NASA + nearest TMC-2 + IIRS,
+       each auto-selected server-side (footprint proximity + coarse NCC) */
+    const refs = (j.references && j.references.references) || [];
+    let refRows = "";
+    for (const r of refs) {
+      const label = r.instrument || r.role;
+      if (r.status === "selected" && r.url) {
+        refRows += `<span>${label}</span><span>` +
+          `<a href="${r.url}" target="_blank" style="text-decoration:underline">${r.product_id || "auto-selected"}</a>` +
+          (r.footprint_km != null ? " · " + Number(r.footprint_km).toFixed(0) + " km" : "") +
+          `</span>`;
+      } else {
+        refRows += `<span>${label}</span><span>${String(r.note || r.status || "not available").slice(0, 90)}</span>`;
+      }
+    }
     $("uploadKv").innerHTML =
       `<span>scene</span><span>${j.created_scene}</span>` +
       `<span>relief range</span><span>${g.zmin_m.toFixed(1)} – ${g.zmax_m.toFixed(1)} m</span>` +
       `<span>grid</span><span>${g.n}×${g.n} · cell ≈ ${g.cell_meters} m</span>` +
       `<span>craters detected</span><span>${(j.craters || []).length}</span>` +
-      `<span>reference</span><span>${(meta.reference_source || "auto-selected").slice(0, 60)}</span>`;
+      refRows;
     $("viewIn3dBtn").disabled = false;
     $("uploadNote").textContent = "Scene '" + j.created_scene +
-      "' created from the mission product — reference auto-selected. " +
-      "Open 01 MATCH for the full pipeline.";
+      "' created from the mission product — the NASA LRO NAC reference and " +
+      "the nearest TMC-2 / IIRS products were sorted and selected " +
+      "automatically. Open 01 MATCH for the full pipeline." +
+      (j.references && j.references.summary ?
+        " " + j.references.summary : "");
     await window.__loadScenes();
     const sel = $("sceneSel");
     sel.value = j.created_scene;
@@ -1045,6 +1117,27 @@ $("viewIn3dBtn").addEventListener("click", () => {
   window.__showTab("terrain");
 });
 
+/* SYNC SCENE → UPLOAD: pull the currently matched scene's source image
+   into the upload window as if it had been dropped there (one click,
+   match ⇄ upload stay in sync) */
+window.__syncFromMatch = async function () {
+  const url = window.__sceneSourceUrl;
+  if (!url) return;
+  const note = $("uploadNote");
+  try {
+    note.textContent = "syncing scene image into the upload window…";
+    const r = await fetchT((window.API_BASE || "") + url, null, 60000);
+    if (!r.ok) throw new Error("server responded " + r.status);
+    const blob = await r.blob();
+    const name = (window.__currentSceneName || "scene").replace(/[^\w.-]+/g, "_") + ".png";
+    await analyze(new File([blob], name, { type: "image/png" }));
+    window.__showTab("upload");
+  } catch (e) {
+    note.textContent = "Sync failed: " + e.message;
+  }
+};
+$("syncUploadBtn").addEventListener("click", () => window.__syncFromMatch());
+
 /* promote the analyzed upload to a full matchable scene (appears in the
    MATCH window dropdown and runs the complete pipeline on it) */
 $("sceneBtn").addEventListener("click", async () => {
@@ -1117,6 +1210,48 @@ grid.position.y = -2; scene.add(grid);
 
 let terrainGroup = null;
 const SIZE = 1000;
+/* multi-layer state: the mesh geometry/material are kept so the layer
+   switcher can re-color / re-height the SAME mesh without rebuilding */
+const layerState = { n: 0, H: null, vScale: 1, zOff: 0, horiz: 1,
+  geo: null, mat: null, payload: null, layers: null, current: 'sfs' };
+const $id = (id) => document.getElementById(id);
+
+function _hexToRgb(hex) {
+  const v = parseInt(hex.replace('#', ''), 16);
+  return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255];
+}
+function _setHeights(grid, zmin, zSpan) {
+  const { geo, n, vScale, zOff } = layerState;
+  const pos = geo.attributes.position;
+  const vs = Math.max(3 * layerState.horiz, 260 / Math.max(zSpan, 1e-6));
+  const vsc = (zSpan * vs > 420) ? 420 / zSpan : vs;
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++)
+      pos.setY(i * n + j, (grid[i][j] - zmin) * vsc);
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+function _setVertexColors(colorFn) {
+  const { geo, n } = layerState;
+  const count = geo.attributes.position.count;
+  let attr = geo.getAttribute('color');
+  if (!attr || attr.count !== count) {
+    attr = new THREE.BufferAttribute(new Float32Array(count * 3), 3);
+    geo.setAttribute('color', attr);
+  }
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      const c = colorFn(i, j);
+      attr.setXYZ(i * n + j, c[0], c[1], c[2]);
+    }
+  attr.needsUpdate = true;
+}
+function _plainMaterial(color) {
+  const m = layerState.mat;
+  m.map = null; m.vertexColors = false; m.color.set(color);
+  m.needsUpdate = true;
+  $id('mineralLegend').style.display = 'none';
+}
 
 function buildTerrain(payload) {
   if (terrainGroup) { scene.remove(terrainGroup); terrainGroup = null; }
@@ -1128,6 +1263,8 @@ function buildTerrain(payload) {
   let vScale = Math.max(3 * horiz, 260 / zSpan);
   if (zSpan * vScale > 420) vScale = 420 / zSpan;
   const zOff = -G.zmin_m;
+  Object.assign(layerState, { n, H, vScale, zOff, horiz,
+    payload, layers: null, current: 'sfs' });
 
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, n - 1, n - 1);
   geo.rotateX(-Math.PI / 2);
@@ -1138,10 +1275,12 @@ function buildTerrain(payload) {
   geo.computeVertexNormals();
 
   const group = new THREE.Group();
-  group.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+  const mat = new THREE.MeshStandardMaterial({
     color: 0x151515, metalness: 0.5, roughness: 0.42,
     emissive: 0x0a0a0a, transparent: true, opacity: 0.95,
-    side: THREE.DoubleSide })));
+    side: THREE.DoubleSide });
+  layerState.geo = geo; layerState.mat = mat;
+  group.add(new THREE.Mesh(geo, mat));
   group.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
     color: 0xffffff, wireframe: true, transparent: true, opacity: 0.10 })));
 
@@ -1180,11 +1319,135 @@ async function loadTerrain(id) {
     const res = await fetchT((window.API_BASE || "") + '/terrain/' + id, null, 90000);
     if (!res.ok) throw new Error('server responded ' + res.status);
     buildTerrain(await res.json());
+    loadLayers(id);                     /* async - never blocks the mesh */
   } catch (e) {
     /* never leave the overlay stuck: report and keep the note visible */
     overlay.textContent = 'TERRAIN UNAVAILABLE — ' + e.message;
   }
 }
+
+/* ---- multi-instrument layer switcher (OHRC / TMC-2 metric / IIRS) ---- */
+async function loadLayers(sceneId) {
+  const bar = $id('layerBar');
+  [...bar.querySelectorAll('button')].forEach(b => {
+    if (b.dataset.layer !== 'sfs') b.disabled = true;
+  });
+  $id('layerNote').textContent = 'checking available data layers…';
+  try {
+    const res = await fetchT((window.API_BASE || "") + '/layers/' + sceneId, null, 600000);
+    if (!res.ok) throw new Error('server responded ' + res.status);
+    layerState.layers = await res.json();
+  } catch (e) {
+    $id('layerNote').textContent = 'layer info unavailable: ' + e.message;
+    return;
+  }
+  const L = layerState.layers;
+  const avail = {
+    sfs: true,
+    tex: !!(L.optical_texture && L.optical_texture.available),
+    metric: !!(L.metric_dem_tmc2 && L.metric_dem_tmc2.available),
+    minerals: !!(L.minerals_iirs && L.minerals_iirs.available),
+    diff: !!(L.sfs_vs_metric && L.sfs_vs_metric.available),
+  };
+  [...bar.querySelectorAll('button')].forEach(b => {
+    b.disabled = !avail[b.dataset.layer];
+  });
+  $id('layerNote').textContent =
+    'layers — ' +
+    (avail.metric ? 'TMC-2 metric DEM ✓ · ' : 'TMC-2 metric: not co-registered · ') +
+    (avail.minerals ? 'IIRS minerals ✓ · ' : 'IIRS minerals: not co-registered · ') +
+    (avail.diff ? 'SFS−metric validation ✓' : 'validation: needs metric DEM');
+}
+
+function applyLayer(name) {
+  const L = layerState.layers;
+  layerState.current = name;
+  [...$id('layerBar').querySelectorAll('button')].forEach(b =>
+    b.style.borderColor = (b.dataset.layer === name) ? '#888' : '');
+  if (name === 'sfs' || !L) {
+    _setHeights(layerState.H, -layerState.zOff,
+      layerState.payload.grid.zmax_m - layerState.payload.grid.zmin_m);
+    _plainMaterial(0x151515);
+    $id('layerNote').textContent = L ? (L.height_sfs || {}).note :
+      'shape-from-shading height field (photometric, non-metric)';
+    return;
+  }
+  if (name === 'tex') {
+    _setHeights(layerState.H, -layerState.zOff,
+      layerState.payload.grid.zmax_m - layerState.payload.grid.zmin_m);
+    const m = layerState.mat;
+    const loader = new THREE.TextureLoader();
+    loader.load((window.API_BASE || "") + L.optical_texture.url, (t) => {
+      m.map = t; m.color.set(0xffffff); m.vertexColors = false;
+      m.needsUpdate = true;
+    });
+    $id('mineralLegend').style.display = 'none';
+    $id('layerNote').textContent = L.optical_texture.note +
+      ' — the raw ' + 'radiance image draped over the reconstructed relief';
+    return;
+  }
+  if (name === 'metric') {
+    const g = L.metric_dem_tmc2.grid;
+    const zs = Math.max(...g.flat()) - Math.min(...g.flat());
+    _setHeights(g, Math.min(...g.flat()), zs);
+    _plainMaterial(0x1d3a5f);
+    $id('layerNote').textContent = 'TMC-2 stereo-photogrammetric DTM — ' +
+      'MEASURED metric heights (m), not an approximation · ' +
+      L.metric_dem_tmc2.product_id;
+    return;
+  }
+  if (name === 'minerals') {
+    const cls = L.minerals_iirs.classes;
+    const colors = {};
+    L.legend_iirs.forEach(e => colors[e.id] = _hexToRgb(e.color));
+    _setHeights(layerState.H, -layerState.zOff,
+      layerState.payload.grid.zmax_m - layerState.payload.grid.zmin_m);
+    _setVertexColors((i, j) => colors[cls[i][j]] || [0.2, 0.2, 0.2]);
+    const m = layerState.mat;
+    m.map = null; m.vertexColors = true; m.color.set(0xffffff);
+    m.needsUpdate = true;
+    /* legend */
+    const leg = $id('mineralLegend');
+    leg.innerHTML = L.legend_iirs.map(e =>
+      `<span style="display:inline-flex;align-items:center;gap:6px">` +
+      `<span style="width:12px;height:12px;border-radius:3px;background:${e.color};display:inline-block"></span>` +
+      `<span style="font-size:12px">${e.name}</span></span>`).join('');
+    leg.style.display = 'flex';
+    $id('layerNote').textContent = 'IIRS spectral classification — ' +
+      L.minerals_iirs.method + ' · ' + L.minerals_iirs.product_id;
+    return;
+  }
+  if (name === 'diff') {
+    const g = L.metric_dem_tmc2.grid;
+    const sfs = layerState.H;
+    let maxAbs = 1e-6;
+    const diff = sfs.map((row, i) => row.map((v, j) => {
+      const d = v - g[i][j];
+      maxAbs = Math.max(maxAbs, Math.abs(d));
+      return d;
+    }));
+    _setHeights(layerState.H, -layerState.zOff,
+      layerState.payload.grid.zmax_m - layerState.payload.grid.zmin_m);
+    _setVertexColors((i, j) => {
+      const t = Math.max(-1, Math.min(1, diff[i][j] / maxAbs));
+      return t >= 0 ? [1, 1 - t, 1 - t] : [1 + t, 1 + t, 1];
+    });
+    const m = layerState.mat;
+    m.map = null; m.vertexColors = true; m.color.set(0xffffff);
+    m.needsUpdate = true;
+    $id('mineralLegend').style.display = 'none';
+    $id('layerNote').textContent = 'SFS − TMC-2 metric (normalized): ' +
+      'Pearson r = ' + L.sfs_vs_metric.pearson_r +
+      ' · MAE ' + L.sfs_vs_metric.mae_norm +
+      ' — red: SFS higher, blue: SFS lower (honest shape-agreement check ' +
+      'of the photometric reconstruction against measured heights)';
+  }
+}
+$id('layerBar').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-layer]');
+  if (b && !b.disabled) applyLayer(b.dataset.layer);
+});
+
 
 function resize() {
   const w = host.clientWidth, h = host.clientHeight;

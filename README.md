@@ -122,7 +122,9 @@ Sentry, Gemini. The app is fully functional with none of them.
 | `GET /narrate/{id}` | Redis rate-limited Gemini narration of the computed metrics — 180–220 words, mathematically detailed, plain text (local-template fallback) |
 | `POST /ask` | judge Q&A: Gemini answers grounded in PRESENTATION_GUIDE.md + the mathematics plan + the explainer document — never in general knowledge |
 | `POST /analyze_upload` | plain image → SFS relief → terrain payload; `make_scene=true` promotes it to a full matchable scene with auto-selected reference |
-| `POST /ingest_product_upload` | ISRO PDS4 XML+IMG pair, NASA PDS3 pair, or a ZIP of the product directory → full matchable scene |
+| `POST /ingest_product_upload` | ISRO PDS4 XML+IMG pair, NASA PDS3 pair, TMC DTM XML+GeoTIFF, or a ZIP/TAR of the product directory → full matchable scene |
+| `GET /references/{id}` | the auto-selected NASA + nearest TMC-2 + IIRS references for a scene, with rankings |
+| `GET /layers/{id}` | per-scene data layers: SFS height, optical texture, TMC-2 metric DEM + SFS-vs-metric validation, IIRS mineral classes + legend |
 | `POST /ingest_product` | server-side path ingestion of any `data/raw` product, any crop window |
 | `GET /static/...` | processed scene imagery (source/reference PNGs) |
 | `GET /debug/sentry-test` | deliberate Sentry event to verify ingestion |
@@ -176,6 +178,46 @@ refinement) → keep the best post-alignment NCC → write the decision into
 overlaps, a **simulated second pass** (gamma 1.35, rotation 1.8°, scale 1.035,
 radiance gradient + noise) is generated so the scene is always matchable —
 and labeled as simulated, never passed off as real.
+
+## Multi-instrument ISRO references — TMC-2 & IIRS selected alongside NASA
+
+Every ingested/uploaded scene also gets the **ISRO cross-instrument
+selection** (`ingest.auto_select_isro_references`, backed by `backend/tmc.py`
+and `backend/iirs.py`), so an OHRC upload automatically sorts and selects its
+ISRO counterparts the same way the NASA reference is chosen:
+
+- **TMC/TMC-2 DTM library** (`backend/tmc.py`): indexes every PRADAN TMC
+  bundle TAR / product ZIP found at the repo root or `data/raw/tmc_bundles/`
+  **without extracting the DTM rasters** — only the small PDS4 labels
+  (ISDA footprint corners + sun angles) and browse PNGs are cache-extracted
+  to `data/reference/tmc/<product_id>/` (~21 MB for 48 Chandrayaan-2 TMC-2
+  products, committed).
+  Products are ranked by **great-circle footprint distance + multi-scale
+  coarse NCC**, the nearest one is registered onto the source grid
+  (template + SIFT) and saved as `reference_tmc.png`. Cross-modal honesty:
+  mutual information (Problem 6) is reported alongside NCC since TMC DTM
+  shaded relief vs OHRC panchromatic radiance are different sensor physics.
+- **IIRS library** (`backend/iirs.py`): the same select/build API over
+  IIRS products — indexed automatically from `ch2_iir_*.zip` downloads at
+  the repo root (label + ENVI `.hdr` + browse PNG cache-extracted; the
+  multi-GB spectral cube is never unpacked) or from extracted
+  `data/raw/iirs/` directories. Rebuild triggers automatically when a zip
+  appears or finishes downloading. Both acquired records
+  (`ch2_iir_nci_20221227T0748212038_d32`, `ch2_iir_nci_20231222T0751377198_d18`,
+  256-band cubes) are indexed with ISDA footprints and sun angles, and the
+  nearest one is registered and saved as `reference_iirs.png` per scene,
+  with mutual information reported (Problem 6) as the cross-modal measure.
+- Every scene's `metadata.json` records `tmc_reference`,
+  `tmc_reference_ranked`, `iirs_reference`, `iirs_reference_ranked` and a
+  `multi_instrument_summary`; the API exposes `GET /references/{scene_id}`
+  and both upload endpoints return a `references` payload that the 03
+  UPLOAD window renders as rows (with /static links).
+- ISRO labels also drive the physics: when a product's label carries
+  `isda:sun_azimuth` / `isda:sun_elevation`, the SFS reconstruction uses the
+  **mission's own sun geometry** automatically.
+- The UPLOAD dropzone now accepts `.xml+.img`, `.xml+.tif`, `.zip` and
+  `.tar` (PRADAN bundle) uploads; truncated bundle TARs are recorded and
+  skipped, never fatal.
 
 ## The ONNX descriptor — trained in-repo (`backend/train_descriptor.py`)
 

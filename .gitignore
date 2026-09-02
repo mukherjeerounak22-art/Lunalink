@@ -1,7 +1,9 @@
 # ---- data (1 GB+ scenes, model weights - regeneratable) ----
 # everything under data/ is regeneratable EXCEPT the curated demo upload
-# set (data/demo_upload/) and the three baked demo scenes + registry, which
-# are committed so a fresh Render/Vercel clone is demo-ready.
+# set (data/demo_upload/), the three baked demo scenes + registry, and the
+# lightweight ISRO TMC reference library (browse PNGs + PDS4 labels only -
+# never the DTM rasters), which are committed so a fresh Render/Vercel
+# clone is demo-ready with multi-instrument auto-selection working.
 data/*
 !data/demo_upload/
 !data/demo_upload/**
@@ -14,6 +16,13 @@ data/processed/*
 !data/processed/demo_tmc/
 !data/processed/demo_tmc/**
 !data/processed/registry.json
+!data/reference/
+data/reference/lro_nac/*
+!data/reference/tmc/
+!data/reference/tmc/**
+data/reference/tmc/_scanning/
+!data/reference/iirs/
+!data/reference/iirs/**
 backend/models/*.onnx
 *.onnx
 !backend/models/descriptor.onnx
@@ -36,3 +45,9 @@ __pycache__/
 # ---- node/vercel ----
 node_modules/
 .vercel/
+
+# ---- extracted big rasters (layer caches - re-extractable) ----
+data/reference/tmc/*/dtm.tif
+data/reference/tmc/*/dtm.tif.part
+data/reference/iirs/*/cube.qub
+data/reference/iirs/*/cube.qub.part

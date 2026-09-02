@@ -152,4 +152,52 @@ model are committed, so no manual data upload is needed.
 
 Then: screen-record a backup demo video.
 
+## 9. One-link hosting — share ONE URL for everything (backend + API + ONNX + frontend + static imagery)
+
+The frontend is a zero-build single HTML file that the FastAPI backend
+**already serves itself** (`app.mount("/", StaticFiles(directory=FRONTEND))`,
+and `frontend/config.js` uses `window.API_BASE = ""` = same origin). So the
+simplest shareable deployment is **one web service, one URL** — no Vercel
+step, no CORS juggling, no second deploy:
+
+**Recommended path: Render web service (the included `render.yaml`)**
+
+1. Push the repo to GitHub (`origin` is already configured).
+2. render.com → **New + → Blueprint** → pick the repo → **Apply**.
+   `render.yaml` deploys `backend/` with `pip install -r requirements.txt`
+   and `uvicorn main:app --host 0.0.0.0 --port $PORT`, health-checked at
+   `/health`.
+3. Wait for the build (~5–10 min). `https://sih26166-backend.onrender.com`
+   now serves **everything**: the UI at `/`, the API, `/static` scene
+   imagery, and the trained `backend/models/descriptor.onnx` (committed, so
+   `/health` reports `learned_model_loaded: true` on a fresh deploy).
+4. Optional keys (Gemini, Supabase, Upstash, Sentry) go in the Render
+   dashboard → Environment — never in git.
+5. Share `https://<your-service>.onrender.com`. Done.
+
+Why this beats the two-URL Vercel+Render setup for sharing: one link is one
+thing to remember, the `?api=` trick becomes unnecessary, and the page can
+never point at a stale backend. (The Vercel option in §6 still works if you
+want a separate pretty domain for the UI.)
+
+**Free-tier caveats & honest limits**
+
+- The free plan sleeps after ~15 min idle (first visitor waits ~50 s) and
+  has 512 MB RAM + ephemeral disk. The committed baked scenes
+  (`data/processed/*`), demo upload set, ONNX model, and the **lightweight
+  ISRO TMC reference library** (`data/reference/tmc/` — browse thumbnails +
+  labels only, ~21 MB, committed via `.gitignore`) all boot with the
+  service, so multi-instrument auto-selection works out of the box.
+- The multi-GB raw products (LRO NAC strips, TMC bundle TARs, the OHRC
+  IMG) are NOT deployable to a free tier — large product uploads
+  (`/ingest_product_upload`) are still possible client-side but give the
+  best experience locally. Small product ZIPs and images work fine.
+- If you need the full raw libraries hosted too: Render paid tier with a
+  persistent disk, **Railway** / **Fly.io** (volume mounts, more RAM), or
+  **Hugging Face Spaces** (Docker, free 16 GB RAM container — add a
+  `Dockerfile` that runs `uvicorn main:app --host 0.0.0.0 --port 7860`
+  and put the big data in a Spaces dataset or an attached persistent
+  storage). Same single-URL story on all of them.
+
+
 

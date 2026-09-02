@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><?xml-model href="https://isda.issdc.gov.in/pds4/isda/v1/ch2_ldd_ISDA_1000.sch" schematypens="http://purl.oclc.org/dsdl/schematron" ?><Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1" xmlns:disp="http://pds.nasa.gov/pds4/disp/v1" xmlns:isda="https://isda.issdc.gov.in/pds4/isda/v1" xmlns:pds="http://pds.nasa.gov/pds4/pds/v1" xmlns:sp="http://pds.nasa.gov/pds4/sp/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 http://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1B00.xsd                  http://pds.nasa.gov/pds4/disp/v1 http://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1301.xsd                 http://pds.nasa.gov/pds4/sp/v1 http://pds.nasa.gov/pds4/sp/v1/PDS4_SP_1100.xsd           https://isda.issdc.gov.in/pds4/isda/v1 https://isda.issdc.gov.in/pds4/isda/v1/ch2_ldd_ISDA_1000.xsd">
+    
+    <Identification_Area>
+        <logical_identifier>urn:isro:isda:ch2_cho.tmc:data_derived:ch2_tmc_ndn_20220109t1219587048_d_dtm_d32</logical_identifier>
+        <version_id>1.0</version_id>
+        <title>Chandrayaan-2 Orbiter TMC 2 Experiment</title>
+        <information_model_version>1.11.0.0</information_model_version>
+        <product_class>Product_Observational</product_class>
+        <Modification_History>
+            <Modification_Detail>
+                <modification_date>2019-05-07</modification_date>
+                <version_id>1.0</version_id>
+                <description>PDS4 product label created by SAC Optical DP Team</description>
+            </Modification_Detail>
+        </Modification_History>
+    </Identification_Area>
+    <Observation_Area>
+        <Time_Coordinates>
+            <start_date_time>2022-01-09T12:19:58.7048Z</start_date_time>
+            <stop_date_time>2022-01-09T12:34:58.7948Z</stop_date_time>
+        </Time_Coordinates>
+        <Primary_Result_Summary>
+            <purpose>Science</purpose>
+	    <processing_level>Derived</processing_level>
+            <description>Derived Processing Level describes the radiometric and geometric corrected data</description>
+	</Primary_Result_Summary>
+        <Investigation_Area>
+            <name>Chandrayaan-2</name>
+            <type>Mission</type>
+            <Internal_Reference>
+                <lidvid_reference>urn:isro:isda:context:investigation:mission.chandrayaan2::1.0</lidvid_reference>
+                <reference_type>data_to_investigation</reference_type>
+            </Internal_Reference>
+        </Investigation_Area>
+        <Observing_System>
+            <Observing_System_Component>
+                <name>Chandrayaan 2 Orbiter</name>
+                <type>Spacecraft</type>
+                <description>
+                    Chandrayaan-2 Orbiter is an Orbiter craft under the Chandrayaan-2 Spacecraft 
+                    consists of various scientific instruments.
+                </description>
+            </Observing_System_Component>
+            <Observing_System_Component>
+                <name>terrain mapping camera</name>
+                <type>Instrument</type>
+                <description>
+                    TMC-2 (Terrain Mapping Camera) is one of the scientific instrument hosted 
+                    on the Chandrayaan-2 Orbiter. The instrument is passive electro-optical 
+                    imaging camera operating in visible-panchromatic band (500-800nm), 
+                    comprising three optical sensors Fore, Nadir and Aft placed with angles 
+                    of +25 deg, 0 deg and -25 deg to have three stereo views of the same target 
+                    as spacecraft moves along the track.
+                </description>
+            </Observing_System_Component>
+        </Observing_System>
+        <Target_Identification>
+            <name>Moon</name>
+            <type>Satellite</type>
+            <description>Moon is a natural satellite of Earth</description>
+        </Target_Identification>
+        <Mission_Area>
+            <isda:Product_Parameters>
+                <isda:job_id>TMCXXD32CHO1058600NNNN22009131003277_V2_1</isda:job_id>
+                <isda:level0_dir_name>TMCXXD32CHO1058600NNNN22009131003277_V2_1</isda:level0_dir_name>
+                <isda:imaging_orbit_number>10586</isda:imaging_orbit_number>
+                <isda:dumping_orbit_number>10586</isda:dumping_orbit_number>
+                <isda:line_exposure_duration unit="ms">3.236</isda:line_exposure_duration>
+                <isda:gain>g1</isda:gain>
+                <isda:exposure>e1</isda:exposure>
+                <isda:detector_pixel_width unit="micrometer">7</isda:detector_pixel_width>            
+                <isda:focal_length unit="mm">140</isda:focal_length>
+                <isda:reference_data_used>n/a</isda:reference_data_used>
+                <isda:orbit_limb_direction>n/a</isda:orbit_limb_direction>
+                <isda:spacecraft_yaw_direction>n/a</isda:spacecraft_yaw_direction>
+                <isda:spacecraft_altitude unit="km">94.50</isda:spacecraft_altitude>
+                <isda:product_accuracy_stdev_height unit="m">n/a</isda:product_accuracy_stdev_height>
+                <isda:product_accuracy_rmse_height unit="m">n/a</isda:product_accuracy_rmse_height>
+                <isda:roll unit="deg">0.000058</isda:roll>
+                <isda:pitch unit="deg">-0.002536</isda:pitch>
+                <isda:yaw unit="deg">0.001616</isda:yaw>
+                <isda:sun_azimuth unit="deg">78.391902</isda:sun_azimuth>
+                <isda:sun_elevation unit="deg">8.522056</isda:sun_elevation>
+                <isda:solar_incidence unit="deg">81.477944</isda:solar_incidence>
+                <isda:projection>Polar stereographic</isda:projection>
+                <isda:area>South Pole</isda:area>
+            </isda:Product_Parameters>
+            <isda:Geometry_Parameters>
+                <isda:System_Level_Coordinates>
+                    <isda:upper_left_latitude unit="deg">-75.041584</isda:upper_left_latitude>
+                    <isda:upper_left_longitude unit="deg">263.571373</isda:upper_left_longitude>
+                    <isda:upper_right_latitude unit="deg">-75.001112</isda:upper_right_latitude>
+                    <isda:upper_right_longitude unit="deg">266.120256</isda:upper_right_longitude>
+                    <isda:lower_left_latitude unit="deg">-58.952170</isda:lower_left_latitude>
+                    <isda:lower_left_longitude unit="deg">80.490540</isda:lower_left_longitude>
+                    <isda:lower_right_latitude unit="deg">-58.934091</isda:lower_right_latitude>
+                    <isda:lower_right_longitude unit="deg">79.282146</isda:lower_right_longitude>
+                </isda:System_Level_Coordinates>    
+                <isda:Refined_Corner_Coordinates>
+                    <isda:upper_left_latitude unit="deg">-75.041584</isda:upper_left_latitude>
+                    <isda:upper_left_longitude unit="deg">263.571373</isda:upper_left_longitude>
+                    <isda:upper_right_latitude unit="deg">-75.001112</isda:upper_right_latitude>
+                    <isda:upper_right_longitude unit="deg">266.120256</isda:upper_right_longitude>
+                    <isda:lower_left_latitude unit="deg">-58.952170</isda:lower_left_latitude>
+                    <isda:lower_left_longitude unit="deg">80.490540</isda:lower_left_longitude>
+                    <isda:lower_right_latitude unit="deg">-58.934091</isda:lower_right_latitude>
+                    <isda:lower_right_longitude unit="deg">79.282146</isda:lower_right_longitude>
+                </isda:Refined_Corner_Coordinates>
+                <isda:Corrected_Corner_Coordinates>
+                    <isda:upper_left_latitude unit="deg">-84.202864</isda:upper_left_latitude>
+                    <isda:upper_left_longitude unit="deg">-13.604995</isda:upper_left_longitude>
+                    <isda:upper_right_latitude unit="deg">-60.368647</isda:upper_right_latitude>
+                    <isda:upper_right_longitude unit="deg">79.272698</isda:upper_right_longitude>
+                    <isda:lower_left_latitude unit="deg">-88.231155</isda:lower_left_latitude>
+                    <isda:lower_left_longitude unit="deg">-129.510612</isda:lower_left_longitude>
+                    <isda:lower_right_latitude unit="deg">-60.844728</isda:lower_right_latitude>
+                    <isda:lower_right_longitude unit="deg">92.165288</isda:lower_right_longitude>
+                </isda:Corrected_Corner_Coordinates>
+            </isda:Geometry_Parameters>
+        </Mission_Area>
+    </Observation_Area>
+    <File_Area_Observational>
+        <File>
+            <file_name>ch2_tmc_ndn_20220109T1219587048_d_dtm_d32.tif</file_name>
+            <creation_date_time>2022-12-08T03:44:07</creation_date_time>
+            <file_size unit="byte">3888423183</file_size>
+            <md5_checksum>4e8e529f9c719a718e22e4bd1b20b59d</md5_checksum>
+            <comment>
+                This File contains the DEM derived data product with 10 meter resolution
+                md5_checksum is provided for ensuring data integrity when users are downloading the data.
+            </comment>
+        </File>
+        <Array_2D_Image>
+            <offset unit="byte">0</offset>
+            <axes>2</axes>
+            <axis_index_order>Last Index Fastest</axis_index_order>
+            <Element_Array>
+                <data_type>SignedLSB2</data_type>
+            </Element_Array>
+            <Axis_Array>
+                <axis_name>Line</axis_name>
+                <elements>20553</elements>
+                <sequence_number>1</sequence_number>
+            </Axis_Array>
+            <Axis_Array>
+                <axis_name>Sample</axis_name>
+                <elements>94587</elements>
+                <sequence_number>2</sequence_number>
+            </Axis_Array>
+        </Array_2D_Image>
+    </File_Area_Observational>
+</Product_Observational>

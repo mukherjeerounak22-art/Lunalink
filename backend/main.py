@@ -23,6 +23,7 @@ from pydantic import BaseModel
 import pipeline
 import ingest
 import integrations
+import layers
 
 integrations.init_sentry()
 
@@ -424,6 +425,75 @@ def _terrain_payload(scene_id, dem, cell_m, meta, cache="fresh"):
     }
 
 
+def _references_payload(scene_dir):
+    """Multi-instrument reference summary for a scene: every auto-selected
+    reference that exists on disk (NASA LRO NAC + nearest TMC/TMC-2 + IIRS)
+    with its metadata notes, served with /static URLs for the UI."""
+    meta = {}
+    mp = os.path.join(scene_dir, "metadata.json")
+    if os.path.exists(mp):
+        try:
+            meta = json.load(open(mp))
+        except Exception:                                    # noqa: BLE001
+            meta = {}
+    rel = os.path.relpath(scene_dir, PROC).replace("\\", "/")
+    refs = []
+    for key, label, fn in (("nasa", "NASA LRO NAC", "reference.png"),
+                           ("tmc", "TMC/TMC-2 (ISRO)", "reference_tmc.png"),
+                           ("iirs", "IIRS (ISRO)", "reference_iirs.png")):
+        p = os.path.join(scene_dir, fn)
+        entry = {"role": key, "instrument": label, "file": fn}
+        entry["url"] = "/static/%s/%s" % (rel, fn) \
+            if os.path.exists(p) else None
+        if key == "tmc":
+            info = meta.get("tmc_reference", {})
+        elif key == "iirs":
+            info = meta.get("iirs_reference", {})
+        else:
+            info = {"note": meta.get("reference_source", "")}
+        entry["status"] = info.get("status",
+                                   "selected" if os.path.exists(p)
+                                   else "unavailable")
+        entry["product_id"] = info.get("product_id")
+        entry["footprint_km"] = info.get("footprint_km")
+        entry["post_alignment_ncc"] = info.get("post_alignment_ncc")
+        entry["mutual_information"] = info.get("mutual_information")
+        entry["note"] = info.get("note") or info.get("scale_note") or ""
+        refs.append(entry)
+    return {"references": refs,
+            "ranked": {"tmc": meta.get("tmc_reference_ranked", []),
+                       "iirs": meta.get("iirs_reference_ranked", [])},
+            "summary": meta.get("multi_instrument_summary", "")}
+
+
+_layers_cache = {}
+
+
+@app.get("/layers/{crater_id}")
+def layers_endpoint(crater_id: str):
+    """Multi-instrument layer availability for a scene (02 TERRAIN 3D
+    switcher): SFS height, optical texture, TMC-2 metric DEM + the
+    SFS-vs-metric validation stats, and IIRS mineral classes + legend.
+    Computed lazily and cached in memory (first call may extract large
+    rasters once)."""
+    d = _scene_dir(crater_id)
+    if crater_id not in _layers_cache:
+        try:
+            meta = json.load(open(os.path.join(d, "metadata.json")))
+        except Exception:                                    # noqa: BLE001
+            meta = {}
+        _layers_cache[crater_id] = layers.layers_payload(d, meta)
+    return _layers_cache[crater_id]
+
+
+@app.get("/references/{crater_id}")
+def references(crater_id: str):
+    """The full multi-instrument reference set for a scene: NASA LRO NAC +
+    nearest TMC/TMC-2 + IIRS products (auto-selected), with rankings."""
+    d = _scene_dir(crater_id)
+    return _references_payload(d)
+
+
 @app.post("/ingest_product_upload")
 async def ingest_product_upload(
     files: list[UploadFile] = File(...),
@@ -433,16 +503,19 @@ async def ingest_product_upload(
     sun_el: float = Form(10.0),
 ):
     """Upload a real mission product DIRECTLY - an ISRO PDS4 XML+IMG pair,
-    a NASA PDS3 .XML+.IMG pair, or a ZIP of the product directory - and get
-    a full matchable scene (SFS DEM, craters, auto-selected reference,
-    terrain payload). Plain images use /analyze_upload instead."""
+    a NASA PDS3 .XML+.IMG pair, a TMC DTM XML+GeoTIFF product, a ZIP of the
+    product directory, or a PRADAN bundle TAR of product ZIPs - and get a
+    full matchable scene (SFS DEM, craters, auto-selected NASA + ISRO
+    cross-instrument references, terrain payload). Plain images use
+    /analyze_upload instead."""
     import io
     import zipfile
+    import tarfile
     import tempfile
     if not files:
         raise HTTPException(400, "no files uploaded")
     names = [f.filename or "" for f in files]
-    product_exts = (".zip", ".img", ".xml")
+    product_exts = (".zip", ".img", ".xml", ".tar", ".tif", ".tiff")
     if not any(n.lower().endswith(product_exts) for n in names):
         raise HTTPException(400, "expected a PDS4/PDS3 product (.xml + .img "
                                  "pair, or a .zip of the product directory)")
@@ -451,6 +524,9 @@ async def ingest_product_upload(
         if len(files) == 1 and names[0].lower().endswith(".zip"):
             with zipfile.ZipFile(io.BytesIO(await files[0].read())) as z:
                 z.extractall(tmp)
+        elif len(files) == 1 and names[0].lower().endswith(".tar"):
+            with tarfile.open(fileobj=io.BytesIO(await files[0].read())) as t:
+                t.extractall(tmp)
         else:
             for f in files:
                 dest = os.path.join(tmp, os.path.basename(f.filename
@@ -476,7 +552,9 @@ async def ingest_product_upload(
                                         meta.get("analysis_grid", {})
                                         .get("cell_meters", 1.0), meta),
             "label": res.get("label", {}),
+            "geometry": res.get("geometry", {}),
             "craters": res.get("craters", []),
+            "references": _references_payload(d),
         }
     except FileNotFoundError as exc:
         raise HTTPException(400, str(exc))
@@ -547,6 +625,7 @@ async def analyze_upload(
         _registry = ingest.load_registry()
         result["created_scene"] = scene["scene_id"]
         result["craters"] = scene["craters"]
+        result["references"] = _references_payload(scene["entry"]["dir"])
     return result
 
 
