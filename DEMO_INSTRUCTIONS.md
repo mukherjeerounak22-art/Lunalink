@@ -46,7 +46,7 @@ Then verify against the Vercel page:
 | Scene dropdown (01 MATCH) | three **leveled** scenes: `Level 1 - CH-2 TMC demo product` (easy, 59%), `Level 2 - Tycho synthetic stand-in` (medium, 32%), `Level 3 - CH-2 OHRC real scene` (cross-mission vs NASA, hard, 2.5%) |
 | First match auto-runs | match ring fills, keypoints overlay on both canvases |
 | 02 TERRAIN | mesh auto-rotates; drag orbits, scroll zooms |
-| 03 UPLOAD → drop `data/demo_upload/ch2_ohrc_real_crop_web.jpg` | relief shading appears in ~5–15 s |
+| 03 UPLOAD → drop `data/demo_upload/level3_ch2_ohrc_real_crop_web.jpg` | relief shading appears in ~5–15 s |
 | 04 NARRATION → click the button | `[Gemini] …` (or `[local template]` if quota is out — say it's a designed fallback, identical numbers) |
 | Backup | screen-record the full demo beforehand; also keep a local `python -m uvicorn main:app --port 8000` fallback running on the demo laptop |
 
@@ -70,12 +70,12 @@ fresh `git clone` is demo-ready. Contents and when to use each:
 
 | File | When to use it |
 |---|---|
-| `ch2_ohrc_real_crop_web.jpg` (346 KB) | **The main upload demo.** Real ISRO Chandrayaan-2 OHRC crop (0.265 m/px). It overlaps a real NASA LRO strip, so the reference is auto-selected from the NASA library — the strongest story. |
-| `ch2_ohrc_real_crop_1024.png` | Same scene, lossless PNG — use if a judge asks about compression artifacts. |
-| `synthetic_craters_feature_rich.png` | Synthetic crater field with obvious craters — makes shape-from-shading and the 3-D mesh visually undeniable. Best fallback for a crisp number. |
-| `synthetic_craters_256_fast.jpg` (21 KB) | Fastest possible upload if the demo laptop is slow. |
+| `level3_ch2_ohrc_real_crop_web.jpg` (346 KB) | **The main upload demo.** Real ISRO Chandrayaan-2 OHRC crop (0.265 m/px). It overlaps a real NASA LRO strip, so the reference is auto-selected from the NASA library — the strongest story. |
+| `level3_ch2_ohrc_real_crop_1024.png` | Same scene, lossless PNG — use if a judge asks about compression artifacts. |
+| `level2_synthetic_craters_feature_rich.png` | Synthetic crater field with obvious craters — makes shape-from-shading and the 3-D mesh visually undeniable. Best fallback for a crisp number. |
+| `level2_synthetic_craters_256_fast.jpg` (21 KB) | Fastest possible upload if the demo laptop is slow. |
 | `negative_control_low_feature.png` | **The honesty demo.** Flat, low-contrast terrain — the pipeline reports near-zero relief, proving it does NOT hallucinate when there is no signal. Judges love this. |
-| `demo_tmc_product_crop_1024.png` | Image cut from a Chandrayaan-2 TMC-style PDS4 product — "product → image" story. |
+| `level1_demo_tmc_product_crop_1024.png` | Image cut from a Chandrayaan-2 TMC-style PDS4 product — "product → image" story. |
 | `product_pds4_pair/` (`ch2_tmc_demo_d_img_d18.xml` + `.img`) | **Direct product upload.** Select BOTH files together in the file dialog (or drag both). The backend parses the PDS4 label and builds a full matchable scene automatically. |
 | `product_pds4_demo.zip` | Same product as a ZIP — one-drag version of the above. |
 | `reference_AUTO_selected_LROC_NAC.png` | **Not for upload** — it is the auto-selected real NASA LRO NAC reference, for showing on a slide next to the source image. |
@@ -92,7 +92,7 @@ fresh `git clone` is demo-ready. Contents and when to use each:
    number is honest — different missions, different suns, different cameras."
 2. **02 TERRAIN**: "this mesh is computed from a SINGLE image by
    shape-from-shading, using the mission's own sun angles. Drag to orbit."
-3. **03 UPLOAD**: drag `ch2_ohrc_real_crop_web.jpg` → relief appears →
+3. **03 UPLOAD**: drag `level3_ch2_ohrc_real_crop_web.jpg` → relief appears →
    "one image in, 3-D terrain out" → SEND TO TERRAIN 3D.
 4. **04 NARRATION**: click narrate → "Gemini turns the metrics into words —
    it only narrates numbers our pipeline computed; it is never allowed to
@@ -146,7 +146,7 @@ This is the "wow" window and the easiest to demo live.
 
 ### The flow, click by click
 
-1. Drag `ch2_ohrc_real_crop_web.jpg` from `data/demo_upload/` onto the
+1. Drag `level3_ch2_ohrc_real_crop_web.jpg` from `data/demo_upload/` onto the
    dropzone (or click it and pick the file).
 2. ~5–10 s later the right canvas shows **RECONSTRUCTED RELIEF SHADING** and
    the key-value panel reports relief range, grid size, sun angles, contour
@@ -534,7 +534,7 @@ three demo scenes (`data/processed/ohrc_real`, `tycho_synthetic`,
 **C. Verify the deployed pair end-to-end** (from any machine):
 - 01 MATCH auto-runs on `CH-2 OHRC real scene` ✓
 - 02 TERRAIN renders ✓
-- 03 UPLOAD with `data/demo_upload/ch2_ohrc_real_crop_web.jpg` ✓
+- 03 UPLOAD with `data/demo_upload/level3_ch2_ohrc_real_crop_web.jpg` ✓
 - 04 NARRATION ✓
 - `python _sanity_check.py <backend-url>` from a clone also exercises the
   whole API against the deployed backend.
@@ -615,7 +615,7 @@ relief ≈ 0–90 m, 8 contour levels, vertical exaggeration printed in the
 readout. Drag = orbit, scroll = zoom, auto-rotate when idle.
 
 **T4 · THE MAIN UPLOAD.** 03 UPLOAD → drop
-`data/demo_upload/ch2_ohrc_real_crop_web.jpg` (~10 s). Expected kv panel:
+`data/demo_upload/level3_ch2_ohrc_real_crop_web.jpg` (~10 s). Expected kv panel:
 relief **0 – 85.4 m**, grid 192×192, sun AUTO-fitted to **az 270.8° / el 10°**
 (the mission's real sun angles — sliders move themselves). Then:
 - **⬡ SEND TO TERRAIN 3D** → your upload's mesh appears in 02.
@@ -634,7 +634,7 @@ near-zero: the pipeline reports what the image contains and refuses to
 invent terrain. Say: "we prove our pipeline doesn't hallucinate."
 
 **T7 · Synthetic crater field (visual).** Upload
-`data/demo_upload/synthetic_craters_feature_rich.png` → obvious crater
+`data/demo_upload/level2_synthetic_craters_feature_rich.png` → obvious crater
 bowls/rims in relief and the 3-D mesh; reference caption typically shows
 `SIMULATED SECOND PASS` (no LRO strip overlaps the synthetic scene — the
 auto-fallback working as documented).

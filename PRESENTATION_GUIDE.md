@@ -393,7 +393,7 @@ Reported as a diagnostic — fine registration remains SIFT + RANSAC.
     I(A;B) = Σ p(a,b) · log[ p(a,b) / (p(a)p(b)) ] ≥ 0 (Jensen: log is
     concave, equality iff independence)
 Implemented as a joint-histogram sum — the cross-modal similarity
-statistic reserved for the IIRS stretch goal.
+statistic, now applied by the TMC-2/IIRS fusion routes (Problem 6 in use).
 
 ### Problem 7 — Truncated 2-D Fourier surface (`pipeline.py::fourier_smooth`)
     z(x,y) = Σ c_mn · exp( i2π(mx/Lx + ny/Ly) ),  c_mn = FFT2 coefficients

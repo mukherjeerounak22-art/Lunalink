@@ -1183,9 +1183,9 @@ you nothing extra about image B's value at that spot (they're statistically inde
 out to exactly zero; the more the two are related — in any kind of way, not just simple proportionality — the
 higher this value climbs. It's guaranteed to never go negative, a fact that follows mathematically from
 Jensen's inequality (a general property of "concave," frown-shaped functions like the logarithm). The guide
-notes this tool is implemented and ready, reserved speciﬁcally for comparing genuinely different sensor
-types (an "IIRS stretch goal" — IIRS presumably referring to a different Chandrayaan-2 instrument with
-fundamentally different imaging physics than OHRC), where a simpler correlation measure wouldn't be
+notes this tool is implemented and is applied TODAY by the fusion routes: the TMC-2 DTM-shaded-relief vs
+OHRC-panchromatic reference pairs and the IIRS-spectral vs panchromatic pairs are exactly the "genuinely
+different sensor" cases it was built for, where a simpler correlation measure wouldn't be
 reliable, since the relationship between two different sensors' brightness values isn't necessarily a simple
 straight line.
 6.7 Truncated Fourier surface (smoothing the terrain mesh)

@@ -1,0 +1,35 @@
+KNOWLEDGE UPDATE — three-instrument fusion is IMPLEMENTED (read this first)
+============================================================================
+
+The prototype now runs all three Chandrayaan-2 instruments end to end, plus
+the NASA LRO NAC reference. Older sections below that call TMC-2/IIRS a
+"stretch goal" or "future work" are superseded by this note.
+
+- Reference libraries: backend/tmc.py indexes 48 Chandrayaan-2 TMC-2 DTM
+  products straight from the PRADAN bundle TARs (labels + browse thumbnails
+  only), backend/iirs.py indexes the 2 IIRS 256-band spectral records from
+  the product ZIPs, backend/lroc.py keeps the 8 NASA LRO NAC strips. Every
+  scene gets the nearest product of each instrument ranked by great-circle
+  footprint distance + coarse NCC, registered onto the scene grid.
+- Layer system (02 TERRAIN 3D, GET /layers/{id}): HEIGHT (shape-from-shading,
+  photometric approximation), OPTICAL (radiance draped on the mesh),
+  METRIC (TMC-2 stereo DTM read as true measured heights in meters, int16
+  with -32768 nodata), MINERALS (IIRS cube classified by continuum-removed
+  band depths at 1 um / 2 um / 3 um - pyroxene-rich, olivine-rich,
+  feldspathic, mixed, OH/H2O classes; heuristic band-depth method, SAM
+  against RELAB/M3 lab spectra remains future work), and SFS-METRIC
+  validation (both fields normalized to [0,1]: Pearson r + normalized MAE;
+  r near 0 is reported honestly for shaded-relief input).
+- Where mutual information is used NOW: reported as the cross-modal
+  similarity statistic for the TMC DTM-shaded-relief vs OHRC-panchromatic
+  and IIRS-spectral vs panchromatic reference pairs (Problem 6 applied,
+  not reserved).
+- Match window additions: multi-instrument reference strip (NASA + nearest
+  TMC-2 + nearest IIRS thumbnails with distances), and a one-click
+  SYNC SCENE -> UPLOAD button that carries the matched scene's image into
+  the upload window.
+- ONNX descriptor retrained locally: triplet ranking accuracy 0.850
+  (gate > 0.5), export verified by onnxruntime.
+- Scene ladder: Level 1 CH-2 TMC demo product, Level 2 Tycho synthetic,
+  Level 3 CH-2 OHRC real scene, Level 4 TMC-2 metric DEM scene
+  (tmc2_metric_demo), Level 5 IIRS mineral scene (iirs_mineral_demo).

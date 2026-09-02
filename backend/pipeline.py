@@ -84,8 +84,8 @@ def photometric_normalize(img):
 
 def mutual_information(a, b, bins=64):
     """Problem 6 - I(A;B) = sum p(a,b) log[p(a,b)/(p(a)p(b))] >= 0 (Jensen),
-    with equality iff independence. Used as the cross-modal similarity
-    statistic for the IIRS stretch goal."""
+    with equality iff independence. Cross-modal similarity statistic used by
+    the TMC-2/IIRS fusion routes."""
     a = ((a - a.min()) / (np.ptp(a) + 1e-9) * (bins - 1)).astype(int).ravel()
     b = ((b - b.min()) / (np.ptp(b) + 1e-9) * (bins - 1)).astype(int).ravel()
     joint = np.histogram2d(a, b, bins=bins)[0]

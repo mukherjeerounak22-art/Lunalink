@@ -285,7 +285,8 @@ all formulas below are implemented verbatim in the referenced functions.
   log-polar resample → phase correlation → rotation θ = Δ∠·360/N_θ, scale
   s = exp(Δlnρ·ln(maxR)/N_ρ), then translation by a second phase
   correlation (Reddy–Chatterji).
-- **Mutual information** (`mutual_information`, IIRS stretch goal):
+- **Mutual information** (`mutual_information`, applied by the TMC-2/IIRS
+  fusion routes):
   `I(A;B) = Σ p(a,b) log[p(a,b)/p(a)p(b)] ≥ 0` (Jensen).
 - **Truncated Fourier surface** (`fourier_smooth`, Problem 7): keep only
   low-|m|,|n| FFT coefficients — exact low-pass; periodic scan artifacts

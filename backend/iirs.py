@@ -231,6 +231,19 @@ def _build_library():
             }
         except Exception:                                    # noqa: BLE001
             continue
+    # 3) cache-resilience: products whose label was already extracted stay
+    #    in the library even if their zip is later deleted (the browse PNG
+    #    and cached label are enough for selection; an extracted cube.qub
+    #    keeps the mineral layer working too)
+    for pid_old, e_old in old_lib.items():
+        if pid_old in entries:
+            continue
+        cache_dir_old = os.path.join(IIRS_CACHE, pid_old)
+        if os.path.exists(os.path.join(cache_dir_old, "label.xml")):
+            e = dict(e_old)
+            e["source"] = "(zip removed - running from cached label+browse)"
+            e["_zip_sig"] = None
+            entries[pid_old] = e
     with open(LIB_JSON, "w") as f:
         json.dump({"products": entries, "zip_signature": _zip_signature()},
                   f, indent=1)
