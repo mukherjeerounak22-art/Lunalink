@@ -264,20 +264,9 @@ def _extract_tif_for_product(pid, src, out_path):
     return False
 
 
-def _metric_from_tif(tif_path, cache_npy, pid):
-    """Read the DTM GeoTIFF as metric heights (m) and downsample to the
-    terrain grid.  Handles float32/float64 rasters and int16/int32
-    meter-encoded rasters (PRADAN TMC-2 DTMs ship int16 m with -32768 as
-    nodata).  Falls back honestly if the decoder cannot read the raster."""
-    err = ""
-    try:
-        dem = cv2.imread(tif_path, cv2.IMREAD_UNCHANGED)
-    except Exception as exc:                                 # noqa: BLE001
-        dem, err = None, str(exc)
-    if dem is None:
-        return None, {"error": "GeoTIFF not readable locally (decoder "
-                               "limitation; GDAL/rasterio would be "
-                               "needed)%s" % (" - " + err if err else "")}
+def _dem_to_grid(dem, cache_npy, pid, native_shape):
+    """Common post-processing: int meter rasters -> float, nodata-aware
+    area-average downsample to the terrain grid."""
     if dem.dtype in (np.float32, np.float64, np.float16):
         dem = dem.astype(np.float32)
         dem[~np.isfinite(dem)] = np.nan
@@ -302,8 +291,110 @@ def _metric_from_tif(tif_path, cache_npy, pid):
                                             "(stereo-photogrammetric, "
                                             "metric heights in m)",
                                   "grid_n": GRID_N,
-                                  "native_shape": [int(dem.shape[0]),
-                                                   int(dem.shape[1])]}
+                                  "native_shape": list(map(int,
+                                                           native_shape))}
+
+
+def _metric_from_tif_pil(tif_path, cache_npy, pid):
+    """PIL fallback for rasters exceeding OpenCV's CV_IO_MAX_IMAGE_PIXELS
+    cap (the d32 DTM strips are ~1.5 GPx).  Uncompressed strips are
+    STREAMED: only ~8 sampled rows per output row are ever read, so a
+    2.9 GB GeoTIFF downsamples in a few MB of RAM."""
+    try:
+        from PIL import Image
+    except ImportError:                                  # pragma: no cover
+        return None, {"error": "GeoTIFF too large for OpenCV and PIL "
+                               "unavailable"}
+    Image.MAX_IMAGE_PIXELS = None
+    try:
+        im = Image.open(tif_path)
+    except Exception as exc:                             # noqa: BLE001
+        return None, {"error": "GeoTIFF not readable (PIL open failed: %s)"
+                               % str(exc)[:110]}
+    try:
+        w, h = im.size
+        tag = getattr(im, "tag_v2", {})
+        bits = tag.get(258, 16)
+        bits = bits[0] if isinstance(bits, (tuple, list)) else bits
+        fmt = tag.get(339, 1)
+        fmt = fmt[0] if isinstance(fmt, (tuple, list)) else fmt
+        np_dt = {(16, 2): np.int16, (16, 1): np.uint16,
+                 (32, 2): np.int32, (32, 3): np.float32,
+                 (32, 1): np.uint32, (8, 1): np.uint8}.get((int(bits),
+                                                            int(fmt)))
+        if np_dt is None:
+            return None, {"error": "unsupported TIFF geometry "
+                                   "(bits=%s fmt=%s)" % (bits, fmt)}
+        comp = tag.get(259, 1)
+        comp = comp[0] if isinstance(comp, (tuple, list)) else comp
+        if int(comp) != 1:
+            # compressed: one full decode, then the common path
+            arr = np.asarray(im).astype(np.float32)
+            return _dem_to_grid(arr, cache_npy, pid, (h, w))
+        offsets, counts = tag.get(273), tag.get(279)
+        if offsets is None:
+            return None, {"error": "TIFF strip table missing"}
+        if not isinstance(offsets, (tuple, list)):
+            offsets = [offsets]
+        rps = tag.get(278, 1)
+        rps = int(rps[0] if isinstance(rps, (tuple, list)) else rps) or 1
+        row_bytes = w * np.dtype(np_dt).itemsize
+        step = max(1, w // GRID_N)
+        n_samp = max(1, min(8, h // GRID_N))
+        is_float = np_dt == np.float32
+        sums = np.zeros((GRID_N, GRID_N), np.float64)
+        wgts = np.zeros((GRID_N, GRID_N), np.float64)
+        fp = im.fp
+        for gy in range(GRID_N):
+            y0 = h * gy // GRID_N
+            y1 = max(h * (gy + 1) // GRID_N, y0 + 1)
+            ys = np.unique(np.linspace(y0, y1 - 1,
+                                       min(n_samp, y1 - y0)).astype(int))
+            for y in ys:
+                si = int(y) // rps
+                fp.seek(int(offsets[si]) + (int(y) % rps) * row_bytes)
+                row = np.frombuffer(fp.read(row_bytes),
+                                    dtype=np_dt).astype(np.float32)
+                if len(row) < w:
+                    continue
+                if is_float:
+                    row[~np.isfinite(row)] = np.nan
+                else:
+                    row[row <= -32000.0] = np.nan
+                use = row[:GRID_N * step].reshape(GRID_N, step)
+                sums += np.nan_to_num(use, nan=0.0).sum(axis=1)
+                wgts += np.isfinite(use).sum(axis=1)
+        g = sums / np.maximum(wgts, 1e-6)
+        g[wgts < 1e-3] = 0.0
+        g = g - float(g.min())
+        os.makedirs(os.path.dirname(cache_npy), exist_ok=True)
+        np.save(cache_npy, g.astype(np.float32))
+        return g.astype(np.float32), {
+            "product_id": pid,
+            "source": "TMC-2 DTM GeoTIFF (stereo-photogrammetric, metric "
+                      "heights in m) [streamed PIL reader]",
+            "grid_n": GRID_N,
+            "native_shape": [int(h), int(w)]}
+    finally:
+        try:
+            im.close()
+        except Exception:                                # noqa: BLE001
+            pass
+
+
+def _metric_from_tif(tif_path, cache_npy, pid):
+    """Read the DTM GeoTIFF as metric heights (m) and downsample to the
+    terrain grid.  Handles float32/float64 rasters and int16/int32
+    meter-encoded rasters (PRADAN TMC-2 DTMs ship int16 m with -32768 as
+    nodata).  Falls back to a streaming PIL reader for rasters bigger
+    than OpenCV's pixel cap, then fails honestly."""
+    try:
+        dem = cv2.imread(tif_path, cv2.IMREAD_UNCHANGED)
+    except Exception:                                    # noqa: BLE001
+        dem = None
+    if dem is not None:
+        return _dem_to_grid(dem, cache_npy, pid, dem.shape)
+    return _metric_from_tif_pil(tif_path, cache_npy, pid)
 
 
 def layers_payload(scene_dir, meta):
@@ -334,10 +425,23 @@ def layers_payload(scene_dir, meta):
                                   "accuracy map of the SFS relief)"},
         "legend_iirs": MINERAL_LEGEND,
     }
-    pid = (meta or {}).get("product_id", "")
-    tmc_prod = next((p for p in tmc_mod.all_products()
-                     if pid and (p["product_id"] in pid or
-                                 pid in p["product_id"])), None)
+    # Prefer the scene's ALREADY-SELECTED cross-instrument references
+    # (recorded at ingest time by the auto-selection in ingest.py) - a
+    # scene's own product_id only matches its own instrument, so the
+    # substring fallback below is just a safety net.
+    def _pick(lib_products, ref_key):
+        ref_pid = ((meta or {}).get(ref_key) or {}).get("product_id")
+        if ref_pid:
+            p = next((q for q in lib_products
+                      if q["product_id"] == ref_pid), None)
+            if p is not None:
+                return p
+        pid = (meta or {}).get("product_id", "")
+        return next((q for q in lib_products
+                     if pid and (q["product_id"] in pid or
+                                 pid in q["product_id"])), None)
+
+    tmc_prod = _pick(tmc_mod.all_products(), "tmc_reference")
     if tmc_prod and "dtm" in (tmc_prod.get("product_kind") or "").lower():
         g, m = tmc2_metric_dem(tmc_prod)
         out["metric_dem_tmc2"] = {
@@ -347,9 +451,7 @@ def layers_payload(scene_dir, meta):
             "note": m.get("source", "") if g is not None
                     else m.get("error", ""),
         }
-    iirs_prod = next((p for p in iirs_mod.all_products()
-                      if pid and (p["product_id"] in pid or
-                                  pid in p["product_id"])), None)
+    iirs_prod = _pick(iirs_mod.all_products(), "iirs_reference")
     if iirs_prod:
         classes, m = iirs_minerals(iirs_prod)
         if classes is not None:
