@@ -115,6 +115,29 @@ def best_variance_window(arr, crop, n=5, stride=4):
     return best_origin
 
 
+def crop_center(geo, lab, r0, c0, crop_size):
+    """Selenographic (lat, lon) of a crop's center: bilinear interpolation
+    of the label's footprint corner coordinates across the full-res pixel
+    grid.  This is what makes 'select a different OHRC portion' pick the
+    references for THAT portion's coordinates, not the whole strip's."""
+    corners = (geo or {}).get("footprint_corners")
+    H, W = lab.get("lines"), lab.get("samples")
+    if not corners or not H or not W:
+        return (geo or {}).get("center")
+    try:
+        ul, ur = corners["upper_left"], corners["upper_right"]
+        ll, lr = corners["lower_left"], corners["lower_right"]
+        fx = min(1.0, max(0.0, (c0 + crop_size / 2.0) / W))
+        fy = min(1.0, max(0.0, (r0 + crop_size / 2.0) / H))
+        def bil(key):
+            top = ul[key] * (1 - fx) + ur[key] * fx
+            bot = ll[key] * (1 - fx) + lr[key] * fx
+            return top * (1 - fy) + bot * fy
+        return {"lat_deg": bil("lat_deg"), "lon_deg": bil("lon_deg")}
+    except Exception:                                        # noqa: BLE001
+        return (geo or {}).get("center")
+
+
 def auto_select_reference(img, max_candidates=None, min_ncc=0.35):
     """Nearest-matching reference selection from the LRO NAC reference
     library (data/reference/lro_nac): coarse NCC locates the scene inside
@@ -210,8 +233,12 @@ def auto_select_isro_references(img, src_center=None, scene_dir=None):
                                              "reference could not be built")}
                 continue
             if scene_dir:
-                save_png(region, os.path.join(
-                    scene_dir, "reference_%s.png" % key))
+                # the region is already contrast-normalised by
+                # build_reference - save WITHOUT the 1-99 re-stretch that
+                # would blow plateau histograms back to white
+                save_png(region.astype(np.float64) / 255.0,
+                         os.path.join(scene_dir, "reference_%s.png" % key),
+                         stretch=False)
             out[key] = {"status": "selected", "ranked": ranked, **meta}
         except Exception as exc:                             # noqa: BLE001
             out[key] = {"status": "error", "note": str(exc)[:160]}
@@ -243,6 +270,10 @@ def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
             "(non-metric), sun geometry assumed from parameters.",
         "gsd_note": gsd_note,
     }
+    if src_center:
+        meta["source_footprint_center"] = {
+            "lat_deg": round(float(src_center["lat_deg"]), 5),
+            "lon_deg": round(float(src_center["lon_deg"]), 5)}
 
     scene_dir = os.path.join(PROC, scene_id)
     os.makedirs(scene_dir, exist_ok=True)
@@ -411,6 +442,9 @@ def ingest_product_dir(product_dir, scene_id=None, crop=None, crop_size=4096,
     crop = crop or best_variance_window(np.nan_to_num(full, nan=0.0),
                                         crop_size)
     r0, c0 = crop
+    # the CROP's own selenographic center (not the whole strip's) drives
+    # the multi-instrument nearest-reference selection
+    src_center = crop_center(geo, lab, r0, c0, crop_size) or src_center
     sub = full[r0:min(r0 + crop_size, lab["lines"]),
                c0:min(c0 + crop_size, lab["samples"])]
     sub = np.nan_to_num(sub, nan=float(np.nanmedian(sub)

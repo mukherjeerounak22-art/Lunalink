@@ -80,5 +80,122 @@
     0.0,
     91.14424133300781
   ],
-  "provenance": "Real Chandrayaan-2 OHRC calibrated radiance (source). Relief reconstructed by linearized-Lambertian shape-from-shading (sun vector from the mission sun-parameter file, FFT Poisson integration; radiometric slope calibration at 8 deg RMS) - photometric approximation, NOT a metric DEM. Reference = simulated second-pass product of the same scene (gamma + radiance gradient + noise + rotation/scale homography) standing in for a LROC NAC / second-orbit crop until real reference overlap is pulled. Tycho scene remains the fully synthetic Lommel-Seeliger pair."
+  "provenance": "Real Chandrayaan-2 OHRC calibrated radiance (source). Relief reconstructed by linearized-Lambertian shape-from-shading (sun vector from the mission sun-parameter file, FFT Poisson integration; radiometric slope calibration at 8 deg RMS) - photometric approximation, NOT a metric DEM. Reference = simulated second-pass product of the same scene (gamma + radiance gradient + noise + rotation/scale homography) standing in for a LROC NAC / second-orbit crop until real reference overlap is pulled. Tycho scene remains the fully synthetic Lommel-Seeliger pair.",
+  "tmc_reference": {
+    "status": "selected",
+    "product_id": "ch2_tmc_ndn_20231109T0207531119_d_dtm_d18",
+    "mission": "Chandrayaan-2",
+    "instrument": "terrain mapping camera",
+    "product_kind": "DTM (derived)",
+    "footprint_km": 0.0,
+    "footprint_center": {
+      "lat_deg": -73.96913225,
+      "lon_deg": 182.92463874999999
+    },
+    "coarse_ncc": 0.841,
+    "translation": {
+      "dx": -256,
+      "dy": 90,
+      "ncc": 0.267
+    },
+    "sift_refined": false,
+    "inliers": 0,
+    "post_alignment_ncc": -0.445,
+    "mutual_information": 0.271,
+    "cross_modal_note": "TMC DTM shaded-relief browse vs panchromatic OHRC radiance - different sensor physics; mutual information reported alongside NCC",
+    "sun": {
+      "sun_azimuth_deg": 300.053363,
+      "sun_elevation_deg": 10.271907
+    },
+    "scale_note": "browse thumbnail resampled onto the OHRC 1024^2 analysis grid (template-aligned)"
+  },
+  "tmc_reference_ranked": [
+    {
+      "product_id": "ch2_tmc_ndn_20231109T0207531119_d_dtm_d18",
+      "mission": "Chandrayaan-2",
+      "instrument": "terrain mapping camera",
+      "footprint_km": 0.0,
+      "coarse_ncc": 0.841,
+      "score": 0.937
+    },
+    {
+      "product_id": "ch2_tmc_ndn_20231026T0943001971_d_dtm_d18",
+      "mission": "Chandrayaan-2",
+      "instrument": "terrain mapping camera",
+      "footprint_km": 7.9,
+      "coarse_ncc": 0.816,
+      "score": 0.845
+    },
+    {
+      "product_id": "ch2_tmc_ndn_20231026T1339018616_d_dtm_d18",
+      "mission": "Chandrayaan-2",
+      "instrument": "terrain mapping camera",
+      "footprint_km": 11.4,
+      "coarse_ncc": 0.759,
+      "score": 0.792
+    },
+    {
+      "product_id": "ch2_tmc_ndn_20231109T0603567692_d_dtm_d18",
+      "mission": "Chandrayaan-2",
+      "instrument": "terrain mapping camera",
+      "footprint_km": 18.2,
+      "coarse_ncc": 0.789,
+      "score": 0.756
+    },
+    {
+      "product_id": "ch2_tmc_ndn_20231026T1735025409_d_dtm_d18",
+      "mission": "Chandrayaan-2",
+      "instrument": "terrain mapping camera",
+      "footprint_km": 30.1,
+      "coarse_ncc": 0.784,
+      "score": 0.688
+    }
+  ],
+  "iirs_reference": {
+    "status": "selected",
+    "product_id": "ch2_iir_nci_20231222T0751377198_d_img_d18",
+    "mission": "Chandrayaan-2",
+    "instrument": "imaging infrared spectrometer",
+    "product_kind": "spectral cube (256 bands)",
+    "footprint_km": 362.8,
+    "footprint_center": {
+      "lat_deg": -67.1237365,
+      "lon_deg": 152.69327275
+    },
+    "coarse_ncc": 0.729,
+    "translation": {
+      "dx": -256,
+      "dy": 195,
+      "ncc": 0.304
+    },
+    "mutual_information": 0.115,
+    "cross_modal_note": "IIRS spectral projection vs panchromatic OHRC radiance - mutual information is the governing cross-modal statistic (Problem 6)",
+    "sun": {
+      "sun_azimuth_deg": 312.319325,
+      "sun_elevation_deg": 12.746791
+    },
+    "scale_note": "grayscale projection resampled onto the OHRC 1024^2 analysis grid (template-aligned)"
+  },
+  "iirs_reference_ranked": [
+    {
+      "product_id": "ch2_iir_nci_20231222T0751377198_d_img_d18",
+      "mission": "Chandrayaan-2",
+      "instrument": "imaging infrared spectrometer",
+      "footprint_km": 362.8,
+      "coarse_ncc": 0.729,
+      "score": 0.364
+    },
+    {
+      "product_id": "ch2_iir_nci_20221227T0748212038_d_img_d32",
+      "mission": "Chandrayaan-2",
+      "instrument": "imaging infrared spectrometer",
+      "footprint_km": 361.4,
+      "coarse_ncc": 0.184,
+      "score": 0.146
+    }
+  ],
+  "source_footprint_center": {
+    "lat_deg": -73.96913225,
+    "lon_deg": 182.92463874999999
+  }
 }

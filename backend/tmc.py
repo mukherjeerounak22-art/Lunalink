@@ -270,6 +270,21 @@ def _browse_gray(prod):
     return None
 
 
+def _valid_bbox(gray):
+    """Bounding box of REAL content inside a PDS4 browse thumbnail - the
+    white letterbox margins and black nodata edges are excluded so a
+    reference crop can never land on a blank field."""
+    h, w = gray.shape
+    m = (gray > 10) & (gray < 245)
+    if m.mean() >= 0.97:                       # no margins worth trimming
+        return 0, w, 0, h
+    rows = np.where(m.sum(axis=1) > w * 0.25)[0]
+    cols = np.where(m.sum(axis=0) > h * 0.25)[0]
+    if len(rows) < 8 or len(cols) < 8:
+        return 0, w, 0, h
+    return int(cols[0]), int(cols[-1]) + 1, int(rows[0]), int(rows[-1]) + 1
+
+
 def footprint_distance(prod, src_center):
     """Great-circle km between the product footprint center and the source
     center dict {lat_deg, lon_deg} (None when either lacks coordinates)."""
@@ -307,10 +322,22 @@ def select_best(src_u8, prods, src_center=None):
                 if sc > best[0]:
                     best = (float(sc), mloc, s)
             ncc, loc, scale = best
+            if loc is not None:
+                # rescale the match location from the (possibly 512-
+                # resized) working image back to ORIGINAL thumb pixels -
+                # build_reference crops from the original, and an
+                # un-rescaled location lands on the letterbox margins
+                # (the blank-white-reference bug)
+                sy_ = thumb.shape[0] / float(th.shape[0])
+                sx_ = thumb.shape[1] / float(th.shape[1])
+                loc = (int(loc[0] * sx_), int(loc[1] * sy_))
         km = footprint_distance(prod, src_center)
         geo_score = (1.0 / (1.0 + km / 50.0)) if km is not None else 0.0
         score = 0.6 * geo_score + 0.4 * max(0.0, ncc)
         cands.append((prod, {"loc": loc, "scale": scale,
+                             "thumb_shape": [int(thumb.shape[0]),
+                                             int(thumb.shape[1])]
+                             if thumb is not None else None,
                              "coarse_ncc": round(ncc, 3),
                              "footprint_km": (round(km, 1)
                                               if km is not None else None)},
@@ -330,14 +357,41 @@ def build_reference(src_u8, prod, cand, out=1024):
         return None, {"error": "no browse thumbnail cached for %s"
                               % prod["product_id"]}
     loc, scale = cand.get("loc"), cand.get("scale")
-    if loc is None:                     # no coarse location - center crop
-        loc = (thumb.shape[1] // 4, thumb.shape[0] // 4)
+    th_hw = cand.get("thumb_shape") or list(thumb.shape)
+    if loc is None:                     # no coarse location - valid center
+        loc = (thumb.shape[1] // 2, thumb.shape[0] // 2)
         scale = 0.24
-    tsz = max(24, int(512 * scale))
+    # template size was a fraction of the 512 working image -> convert to
+    # ORIGINAL thumb pixels (th_hw records the working-image size used)
+    tsz = max(24, int(512 * scale) * thumb.shape[1] // max(int(th_hw[1]), 1))
     half = max(tsz, 32) * 2
-    cx = int(min(max(loc[0], half), max(thumb.shape[1] - half - 1, half)))
-    cy = int(min(max(loc[1], half), max(thumb.shape[0] - half - 1, half)))
-    crop = thumb[max(cy - half, 0):cy + half, max(cx - half, 0):cx + half]
+    # never crop into the white letterbox / black nodata margins
+    x0, x1, y0, y1 = _valid_bbox(thumb)
+
+    def _crop(cx, cy):
+        return thumb[max(cy - half, 0):cy + half,
+                     max(cx - half, 0):cx + half]
+
+    def _valid_frac(cx, cy):
+        c = _crop(cx, cy)
+        if c.size == 0:
+            return 0.0
+        return float(((c > 10) & (c < 245)).mean())
+
+    cx = int(np.clip(loc[0], x0, x1 - 1))
+    cy = int(np.clip(loc[1], y0, y1 - 1))
+    if _valid_frac(cx, cy) < 0.6:
+        # the coarse (cross-modal) match landed on a margin - search the
+        # valid box for the densest real-content window instead
+        best_s, cx, cy = -1.0, cx, cy
+        for fy in np.linspace(0.1, 0.9, 6):
+            for fx in np.linspace(0.1, 0.9, 6):
+                gx = int(x0 + (x1 - x0) * fx)
+                gy = int(y0 + (y1 - y0) * fy)
+                s = _valid_frac(gx, gy)
+                if s > best_s:
+                    best_s, cx, cy = s, gx, gy
+    crop = _crop(cx, cy)
     region = cv2.resize(crop, (out, out), interpolation=cv2.INTER_CUBIC)
 
     # template pre-alignment onto the source grid (same scheme as lroc.py)
@@ -370,6 +424,17 @@ def build_reference(src_u8, prod, cand, out=1024):
     if H is not None:
         region = cv2.warpPerspective(region, H, (out, out), borderValue=0)
 
+    # FINAL contrast normalisation (after all warps, so warp borders and
+    # save_png cannot re-blow the histogram): gain-capped, mean-centred -
+    # a full percentile stretch turns plateau-heavy DTM histograms into a
+    # washed-out white field
+    lo, hi = np.percentile(region, 2), np.percentile(region, 98)
+    if hi - lo > 1e-6:
+        gain = min(255.0 / (hi - lo), 1.7)
+        r = (region.astype(np.float32) - lo) * gain
+        r += (128.0 - r.mean())
+        region = np.clip(r, 0, 255).astype(np.uint8)
+
     # cross-modal similarity: NCC + mutual information (Problem-6 statistic)
     a = region.astype(np.float32)
     b = cv2.resize(src_u8, (out, out)).astype(np.float32)
@@ -386,6 +451,7 @@ def build_reference(src_u8, prod, cand, out=1024):
         "instrument": prod.get("instrument"),
         "product_kind": prod.get("product_kind"),
         "footprint_km": cand.get("footprint_km"),
+        "footprint_center": (prod.get("geometry") or {}).get("center"),
         "coarse_ncc": cand.get("coarse_ncc"),
         "translation": trans,
         "sift_refined": H is not None,

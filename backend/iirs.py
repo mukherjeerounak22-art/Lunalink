@@ -17,7 +17,7 @@ import zipfile
 import cv2
 import numpy as np
 
-from tmc import parse_isda_geometry, footprint_distance
+from tmc import parse_isda_geometry, footprint_distance, _valid_bbox
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IIRS_CACHE = os.path.join(ROOT, "data", "reference", "iirs")
@@ -319,9 +319,19 @@ def select_best(src_u8, prods, src_center=None):
                 if sc > best[0]:
                     best = (float(sc), mloc, s)
             ncc, loc, scale = best
+            if loc is not None:
+                # rescale the match location back to ORIGINAL pixels (the
+                # working image may be 512-resized; an un-rescaled location
+                # crops the wrong area - often a blank margin)
+                sy_ = gray.shape[0] / float(th.shape[0])
+                sx_ = gray.shape[1] / float(th.shape[1])
+                loc = (int(loc[0] * sx_), int(loc[1] * sy_))
         km = footprint_distance(prod, src_center)
         geo_score = (1.0 / (1.0 + km / 50.0)) if km is not None else 0.0
         cands.append((prod, {"loc": loc, "scale": scale,
+                             "thumb_shape": [int(gray.shape[0]),
+                                             int(gray.shape[1])]
+                             if gray is not None else None,
                              "coarse_ncc": round(ncc, 3),
                              "footprint_km": (round(km, 1)
                                               if km is not None else None)},
@@ -340,14 +350,40 @@ def build_reference(src_u8, prod, cand, out=1024):
         return None, {"error": "no readable IIRS raster/browse for %s"
                               % prod["product_id"]}
     loc, scale = cand.get("loc"), cand.get("scale")
+    th_hw = cand.get("thumb_shape") or list(gray.shape)
     if loc is None:
-        loc = (gray.shape[1] // 4, gray.shape[0] // 4)
+        loc = (gray.shape[1] // 2, gray.shape[0] // 2)
         scale = 0.24
-    tsz = max(24, int(512 * scale))
+    # template size was a fraction of the 512 working image -> convert to
+    # ORIGINAL pixels
+    tsz = max(24, int(512 * scale) * gray.shape[1] // max(int(th_hw[1]), 1))
     half = max(tsz, 32) * 2
-    cx = int(min(max(loc[0], half), max(gray.shape[1] - half - 1, half)))
-    cy = int(min(max(loc[1], half), max(gray.shape[0] - half - 1, half)))
-    crop = gray[max(cy - half, 0):cy + half, max(cx - half, 0):cx + half]
+    x0, x1, y0, y1 = _valid_bbox(gray)
+
+    def _crop(cx, cy):
+        return gray[max(cy - half, 0):cy + half,
+                    max(cx - half, 0):cx + half]
+
+    def _valid_frac(cx, cy):
+        c = _crop(cx, cy)
+        if c.size == 0:
+            return 0.0
+        return float(((c > 10) & (c < 245)).mean())
+
+    cx = int(np.clip(loc[0], x0, x1 - 1))
+    cy = int(np.clip(loc[1], y0, y1 - 1))
+    if _valid_frac(cx, cy) < 0.6:
+        # coarse match landed on a margin (IIRS projections carry big black
+        # no-data edges) - find the densest real-content window instead
+        best_s, cx, cy = -1.0, cx, cy
+        for fy in np.linspace(0.1, 0.9, 6):
+            for fx in np.linspace(0.1, 0.9, 6):
+                gx = int(x0 + (x1 - x0) * fx)
+                gy = int(y0 + (y1 - y0) * fy)
+                s = _valid_frac(gx, gy)
+                if s > best_s:
+                    best_s, cx, cy = s, gx, gy
+    crop = _crop(cx, cy)
     region = cv2.resize(crop, (out, out), interpolation=cv2.INTER_CUBIC)
     t = 512
     tpl = region[(out - t) // 2:(out + t) // 2, (out - t) // 2:(out + t) // 2]
@@ -356,6 +392,14 @@ def build_reference(src_u8, prod, cand, out=1024):
     dx, dy = loc2[0] - (out - t) // 2, loc2[1] - (out - t) // 2
     region = cv2.warpAffine(region, np.float32([[1, 0, -dx], [0, 1, -dy]]),
                             (out, out))
+    # FINAL contrast normalisation (after the warp): gain-capped,
+    # mean-centred - never a washed-out or blank field
+    lo, hi = np.percentile(region, 2), np.percentile(region, 98)
+    if hi - lo > 1e-6:
+        gain = min(255.0 / (hi - lo), 1.7)
+        r = (region.astype(np.float32) - lo) * gain
+        r += (128.0 - r.mean())
+        region = np.clip(r, 0, 255).astype(np.uint8)
     a = region.astype(np.float32)
     b = cv2.resize(src_u8, (out, out)).astype(np.float32)
     try:
@@ -369,6 +413,7 @@ def build_reference(src_u8, prod, cand, out=1024):
         "instrument": prod.get("instrument"),
         "product_kind": prod.get("product_kind"),
         "footprint_km": cand.get("footprint_km"),
+        "footprint_center": (prod.get("geometry") or {}).get("center"),
         "coarse_ncc": cand.get("coarse_ncc"),
         "translation": {"dx": int(dx), "dy": int(dy),
                         "ncc": round(float(sc), 3)},

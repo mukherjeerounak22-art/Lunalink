@@ -33,6 +33,23 @@ _registry = ingest.load_registry()
 
 def _all_scenes():
     merged = dict(SCENES)
+    # a dynamically-ingested scene whose processed dir was wiped (cleanup,
+    # fresh re-ingest) is stale - drop it from memory AND the registry so
+    # the UI never receives an id that would 503 later
+    stale = [k for k, v in _registry.items()
+             if not os.path.isdir(v.get("dir", ""))]
+    if stale:
+        for k in stale:
+            _registry.pop(k, None)
+        try:
+            p = os.path.join(PROC, "registry.json")
+            reg = json.load(open(p))
+            if isinstance(reg, dict):
+                for k in stale:
+                    reg.pop(k, None)
+                json.dump(reg, open(p, "w"), indent=1)
+        except Exception:                                    # noqa: BLE001
+            pass
     merged.update(_registry)
     return merged
 
@@ -442,27 +459,31 @@ def _references_payload(scene_dir):
                            ("tmc", "TMC/TMC-2 (ISRO)", "reference_tmc.png"),
                            ("iirs", "IIRS (ISRO)", "reference_iirs.png")):
         p = os.path.join(scene_dir, fn)
+        if not isinstance(refs, list):                       # pragma: no cover
+            refs = []
         entry = {"role": key, "instrument": label, "file": fn}
         entry["url"] = "/static/%s/%s" % (rel, fn) \
             if os.path.exists(p) else None
         if key == "tmc":
-            info = meta.get("tmc_reference", {})
+            info = meta.get("tmc_reference") or {}
         elif key == "iirs":
-            info = meta.get("iirs_reference", {})
+            info = meta.get("iirs_reference") or {}
         else:
-            info = {"note": meta.get("reference_source", "")}
+            info = {"note": meta.get("reference_source") or ""}
         entry["status"] = info.get("status",
                                    "selected" if os.path.exists(p)
                                    else "unavailable")
         entry["product_id"] = info.get("product_id")
         entry["footprint_km"] = info.get("footprint_km")
+        entry["center"] = info.get("footprint_center")
         entry["post_alignment_ncc"] = info.get("post_alignment_ncc")
         entry["mutual_information"] = info.get("mutual_information")
         entry["note"] = info.get("note") or info.get("scale_note") or ""
         refs.append(entry)
     return {"references": refs,
-            "ranked": {"tmc": meta.get("tmc_reference_ranked", []),
-                       "iirs": meta.get("iirs_reference_ranked", [])},
+            "ranked": {"tmc": meta.get("tmc_reference_ranked") or [],
+                       "iirs": meta.get("iirs_reference_ranked") or []},
+            "scene_center": meta.get("source_footprint_center"),
             "summary": meta.get("multi_instrument_summary", "")}
 
 
@@ -646,14 +667,21 @@ def _make_scene_from_upload(img_u8, filename, sun_az, sun_el, scene_name):
 
 @app.get("/debug/sentry-test")
 def sentry_test():
-    """Deliberate test error so you can watch it land in the Sentry
-    dashboard (Issues -> sih26166-backend)."""
-    try:
-        raise RuntimeError("SIH26166 sentry verification event - safe to ignore")
-    except RuntimeError as exc:
-        integrations.capture_exception(exc)
-        integrations.breadcrumb("sentry test event sent", "debug")
-        return {"sent": True, "note": "check Sentry Issues -> sih26166-backend"}
+    """Verify the Sentry WIRING without polluting the issue stream: this
+    health check emits only an informational breadcrumb - it never raises,
+    so no error issue is ever created.  (The old deliberately-raised
+    RuntimeError here is what put that escalating 'safe to ignore' event
+    in the dashboard.)"""
+    integrations.breadcrumb(
+        "sentry wiring verified (health check, no error emitted)", "debug")
+    return {"sent": True,
+            "note": "wiring OK - no error event emitted"}
+
+
+@app.get("/debug/sentry-test-raise")
+def sentry_test_raise():
+    """Explicit opt-in test error (never called by automated checks)."""
+    raise RuntimeError("SIH26166 deliberate sentry verification error")
 
 
 app.mount("/static", StaticFiles(directory=PROC), name="static")

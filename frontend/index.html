@@ -692,9 +692,12 @@ async function loadRefStrip(sceneId) {
     const r = await fetchT(API + "/references/" + sceneId, null, 60000);
     if (!r.ok) throw new Error("server responded " + r.status);
     const j = await r.json();
-    el.innerHTML = j.references.map(ref => {
+    const refs = Array.isArray(j.references) ? j.references : [];
+    const center = j.scene_center;
+    el.innerHTML = refs.map(ref => {
+      ref = ref || {};
       const img = ref.url
-        ? `<img src="${API}${ref.url}" alt="${ref.instrument}" loading="lazy"
+        ? `<img src="${API}${ref.url}" alt="${ref.instrument || ""}" loading="lazy"
              style="width:100%;border-radius:8px;display:block;cursor:zoom-in"
              onclick="window.open('${API}${ref.url}','_blank')">`
         : `<div style="aspect-ratio:1;border:1px dashed #444;border-radius:8px;
@@ -704,10 +707,14 @@ async function loadRefStrip(sceneId) {
         ? ((ref.product_id || "auto-selected") +
            (ref.footprint_km != null ? " · " + ref.footprint_km + " km" : ""))
         : String(ref.note || ref.status || "").slice(0, 70);
-      return `<div><div class="img-cap">${ref.instrument}</div>${img}
+      return `<div><div class="img-cap">${ref.instrument || "reference"}</div>${img}
         <div class="mono-line" style="font-size:10px;margin-top:4px">${sub}</div></div>`;
     }).join("");
-    $("refStripNote").textContent = j.summary || "";
+    $("refStripNote").textContent =
+      (center && center.lat_deg != null
+        ? "scene center " + center.lat_deg.toFixed(3) + "°, " +
+          center.lon_deg.toFixed(3) + "° · " : "") +
+      (j.summary || "");
   } catch (e) {
     el.innerHTML = "";
     $("refStripNote").textContent = "reference strip unavailable: " + e.message;
