@@ -60,3 +60,6 @@ backend/models/*.onnx.bak
 !data/processed/tmc2_metric_demo/**
 !data/processed/iirs_mineral_demo/
 !data/processed/iirs_mineral_demo/**
+
+data/reference/tmc/*/metric_dem.npy
+data/reference/iirs/*/minerals.npz
