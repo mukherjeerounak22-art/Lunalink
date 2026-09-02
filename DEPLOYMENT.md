@@ -188,10 +188,15 @@ want a separate pretty domain for the UI.)
   ISRO TMC reference library** (`data/reference/tmc/` — browse thumbnails +
   labels only, ~21 MB, committed via `.gitignore`) all boot with the
   service, so multi-instrument auto-selection works out of the box.
-- The multi-GB raw products (LRO NAC strips, TMC bundle TARs, the OHRC
-  IMG) are NOT deployable to a free tier — large product uploads
+- The multi-GB raw products (LRO NAC strips, TMC-2 DTM GeoTIFFs, IIRS
+  cubes) are NOT deployable to a free tier — large product uploads
   (`/ingest_product_upload`) are still possible client-side but give the
   best experience locally. Small product ZIPs and images work fine.
+  (Local disk note: the PRADAN bundle TARs and the IIRS product ZIP were
+  deleted after extraction — the working rasters live extracted under
+  `data/reference/` (`tmc/<pid>/dtm.tif`, `iirs/<pid>/cube.qub`), which
+  is what the layer pipeline reads; re-download from PRADAN if you ever
+  need to re-ingest *new* crops from the original bundles.)
 - If you need the full raw libraries hosted too: Render paid tier with a
   persistent disk, **Railway** / **Fly.io** (volume mounts, more RAM), or
   **Hugging Face Spaces** (Docker, free 16 GB RAM container — add a
