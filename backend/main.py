@@ -18,6 +18,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 import pipeline
 import ingest
@@ -256,9 +257,22 @@ def narrate(crater_id: str):
            m.get("ransac", {}).get("inlier_fraction_w", 0),
            m.get("ransac", {}).get("derived_iterations_k", 0)))
     text = integrations.gemini_narrate(
-        "You are narrating lunar image-registration results to a "
-        "non-technical hackathon judge. Be precise, honest, under 120 words. "
-        "Do not invent numbers beyond these: " + summary)
+        "You are narrating lunar image-registration results to a hackathon "
+        "judge who has an engineering background. Be precise, honest, and "
+        "mathematically detailed, in 180-220 words. PLAIN TEXT ONLY: no "
+        "LaTeX, no dollar signs, no markdown, no backticks - write formulas "
+        "in words and plain numbers (example: 'k is at least log of "
+        "1 minus p divided by log of 1 minus w to the fourth'). Walk the "
+        "judge through the mathematics behind these numbers: how the RANSAC "
+        "iteration budget k is derived from the inlier fraction w "
+        "(k >= ln(1-p)/ln(1-w^4), p=0.999 confidence, 4-point homography), "
+        "what reprojection RMSE means per pixel, how crater depth is "
+        "estimated from shadow length times the tangent of the solar "
+        "elevation, and what the Cramer-Rao bound says about the RMSE "
+        "floor. Explain what the low match percentage honestly means for "
+        "cross-mission registration (different cameras, orbits, sun angles) "
+        "and why the SIFT plus learned-descriptor union is the right "
+        "architecture for it. Do not invent numbers beyond these: " + summary)
     source = "gemini" if text else "local-template"
     if not text:
         text = integrations.local_narration(m)
@@ -267,6 +281,96 @@ def narrate(crater_id: str):
     # /match (cache-aside). Here we only narrate.
     return {"narration": text, "source": source, "rate_used": n,
             "metrics_summary": summary}
+
+
+# --------------------------------------------------------------------------
+# Judge Q&A - Gemini answers grounded in the project's own documents
+# (PRESENTATION_GUIDE.md, the implementation-mathematics plan, and the
+# explainer companion extracted from explainer.md.pdf). Knowledge is loaded
+# once at startup; nothing is fetched at request time.
+# --------------------------------------------------------------------------
+_KNOWLEDGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "knowledge")
+_KNOWLEDGE_DOCS = (
+    "PRESENTATION_GUIDE.md",
+    "SIH26166_Implementation_Plan_and_Mathematics.md",
+)
+
+
+def _load_knowledge():
+    docs = []
+    for fn in _KNOWLEDGE_DOCS:
+        p = os.path.join(ROOT, fn)
+        if os.path.isfile(p):
+            docs.append((fn, open(p, encoding="utf-8",
+                                  errors="replace").read()))
+    if os.path.isdir(_KNOWLEDGE_DIR):
+        for fn in sorted(os.listdir(_KNOWLEDGE_DIR)):
+            if fn.lower().endswith((".txt", ".md")):
+                docs.append((fn, open(os.path.join(_KNOWLEDGE_DIR, fn),
+                                      encoding="utf-8",
+                                      errors="replace").read()))
+    return docs
+
+
+_KNOWLEDGE = None
+
+
+def _knowledge_context():
+    global _KNOWLEDGE
+    if _KNOWLEDGE is None:
+        _KNOWLEDGE = _load_knowledge()
+    parts = []
+    for name, body in _KNOWLEDGE:
+        parts.append("=== DOCUMENT: %s ===\n%s" % (name, body))
+    return "\n\n".join(parts)
+
+
+class AskBody(BaseModel):
+    question: str
+
+
+@app.post("/ask")
+def ask(body: AskBody):
+    """Judge Q&A: answer questions about the project, its mathematics and
+    the prototype, grounded in the presentation guide, the mathematics plan
+    and the explainer document - not in Gemini's general knowledge."""
+    q = (body.question or "").strip()[:600]
+    if not q:
+        raise HTTPException(400, "empty question")
+    allowed, n = integrations.redis_rate_limit(
+        "ask", max(5, integrations.NARRATE_RATE_LIMIT // 2), 60)
+    if not allowed:
+        raise HTTPException(429, "Q&A rate limit exceeded")
+    prompt = (
+        "You are the technical spokesperson of team SIH26166 (Lunalink: "
+        "cross-mission lunar image registration, single-image terrain "
+        "reconstruction and crater-based DEM verification for ISRO "
+        "Chandrayaan-2 data). A judge just asked you a question. Answer it "
+        "in 120-250 words, confident, first person plural ('we'). PLAIN "
+        "TEXT ONLY: no LaTeX, no dollar signs, no markdown, no backticks - "
+        "write formulas in words and plain numbers. Ground every technical "
+        "claim in the PROJECT DOCUMENTS below; if the documents do not "
+        "cover it, say so plainly and answer from the documents' spirit "
+        "without inventing specific numbers. If the question is about the "
+        "live prototype, remember the pipeline: SIFT union a learned ONNX "
+        "descriptor, derived-budget RANSAC homography, Fourier-Mellin "
+        "refinement, Lambertian shape-from-shading with FFT Poisson "
+        "solving, marching-squares contours, and a Three.js mesh - and the "
+        "honesty rules: simulated second passes are labeled as such and "
+        "Gemini never generates metrics.\n\n"
+        "JUDGE QUESTION: " + q + "\n\n" + _knowledge_context())
+    text = integrations.gemini_narrate(prompt)
+    if not text:
+        return {
+            "answer": None,
+            "source": "unavailable",
+            "hint": "Gemini is unavailable (missing GOOGLE_API_KEY or "
+                    "quota cooldown). Narration and Q&A share the key.",
+            "rate_used": n,
+        }
+    return {"answer": text, "source": "gemini", "rate_used": n,
+            "grounded_docs": [name for name, _ in _KNOWLEDGE]}
 
 
 @app.post("/ingest_product")

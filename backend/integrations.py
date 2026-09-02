@@ -236,6 +236,26 @@ def gemini_ok():
 _gemini_cooldown_until = 0.0     # 429 quota cooldown (seconds since epoch)
 
 
+def clean_llm_text(text):
+    """Strip LaTeX/markdown artifacts from Gemini output. Even when the
+    prompt forbids it, flash-class models occasionally emit $w=0.02$,
+    escaped percents (2.5\\%), backticks or bold markers - the narration
+    panel is plain text, so none of that should ever reach the judge."""
+    if not text:
+        return text
+    for bad, good in (("$", ""), ("`", ""), ("**", ""), ("__", ""),
+                      ("\\%", "%"), ("\\(", ""), ("\\)", ""),
+                      ("\\[", ""), ("\\]", "")):
+        text = text.replace(bad, good)
+    # collapse runs of blank lines
+    lines = [ln.rstrip() for ln in text.splitlines()]
+    out = []
+    for ln in lines:
+        if ln or not (out and not out[-1]):
+            out.append(ln)
+    return "\n".join(out).strip()
+
+
 def gemini_narrate(prompt):
     """Gemini narration with 429-quota awareness: on a quota-exceeded
     response we log ONE warning-level event and stop calling the API for
@@ -253,7 +273,8 @@ def gemini_narrate(prompt):
             "%s:generateContent?key=%s" % (GEMINI_MODEL, GOOGLE_API_KEY),
             json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
         r.raise_for_status()
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return clean_llm_text(
+            r.json()["candidates"][0]["content"]["parts"][0]["text"])
     except httpx.HTTPStatusError as exc:              # noqa: BLE001
         if exc.response is not None and exc.response.status_code == 429:
             _gemini_cooldown_until = time.time() + 300

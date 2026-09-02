@@ -110,9 +110,10 @@ breadcrumbs after each pipeline stage, plus a deliberate
 
 ### 13. Why Gemini over GPT/Claude?
 Cost (free tier, no card — the whole stack runs at $0), latency
-(flash-lite class for a ≤120-word single-turn summary; context window is
-irrelevant at this task size), and framing: Gemini is prompt-locked to
-metrics the pipeline computed — it never generates numbers.
+(flash-lite class for a 180–220-word single-turn summary; context window
+is irrelevant at this task size), and framing: Gemini is prompt-locked to
+metrics the pipeline computed — it never generates numbers. The judge Q&A
+(`POST /ask`) reuses the same key, grounded in the project's own documents.
 
 ### 14. Fallback if Gemini is down or rate-limited?
 Three layers, all live-tested: (1) local-template narration carrying the
@@ -211,8 +212,11 @@ low-pass → 192×192 grid → marching squares at 8 levels → JSON →
 
 **⑦ NARRATE — `GET /narrate/{id}`** → Redis sliding window (20/min) →
 metrics summary compiled ONLY from computed values → Gemini
-(`gemini-flash-lite-latest`) → ≤120-word judge-facing narration → local
-template fallback; 429 → cooldown.
+(`gemini-flash-lite-latest`) → 180–220-word math-detailed plain-text
+narration → local template fallback; 429 → cooldown.
+**Judge Q&A — `POST /ask`** → the question + the project documents
+(presentation guide, mathematics plan, explainer companion) in one prompt →
+grounded answer (≤250 words), rate-limited, shown with its sources.
 
 **⑧ Errors** → Sentry (frontend JS project + backend Python project,
 breadcrumbs per stage). Raw artifacts for every stage are inspectable on

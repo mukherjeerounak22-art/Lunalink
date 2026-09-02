@@ -27,9 +27,13 @@ integration is optional and degrades to a no-op without keys. Total cost: $0.
    selenographic coordinates via the mission geometry file.
 5. **Render** — a 72,962-triangle Three.js mesh of the Fourier-smoothed DEM
    with sub-pixel marching-squares contours.
-6. **Narrate** — Gemini turns the computed metrics into judge-friendly words,
-   with a local-template fallback; it never invents numbers. The browser can
-   read the narration aloud (Web Speech API, offline).
+6. **Narrate & answer** — Gemini turns the computed metrics into a
+    math-detailed, 180–220-word narration (plain text, no LaTeX artifacts,
+    local-template fallback; it never invents numbers), and powers a
+    **judge Q&A** grounded in the project's own documents
+    (`PRESENTATION_GUIDE.md` + the mathematics plan + the extracted
+    `explainer.md.pdf` companion): ask anything in the 04 NARRATION tab.
+    The browser can read both aloud (Web Speech API, offline).
 
 Three **leveled demo scenes** ship out of the box: Level 1 — CH-2 TMC demo
 product (easy, ~59% match vs a simulated second pass), Level 2 — Tycho
@@ -44,6 +48,7 @@ readout carries the scene's match quality.
 browser (zero-build: 1 HTML file, vanilla ES modules, Three.js via import map)
    │  fetch /health · /craters · /match/{id} · /terrain/{id} · /narrate/{id}
    │  POST /analyze_upload (image) · /ingest_product_upload (PDS4/PDS3 pair|zip)
+   │  POST /ask (document-grounded judge Q&A)
    ▼
 FastAPI (uvicorn, single process serves API + frontend)
    ├─ pipeline.py      SIFT + ONNX union match, RANSAC/DLT, Fourier-Mellin,
@@ -114,7 +119,8 @@ Sentry, Gemini. The app is fully functional with none of them.
 | `GET /craters` | scene registry with full parsed metadata (feeds the dropdown + metadata panel) |
 | `GET /match/{id}` | full match payload: keypoints, inliers, homography, RMSE, derived RANSAC budget, method breakdown (SIFT vs ONNX), Fourier-Mellin diagnostic, craters |
 | `GET /terrain/{id}` | Stage-7 payload: 192×192 Fourier-smoothed height grid + 8 marching-squares contour levels |
-| `GET /narrate/{id}` | Redis rate-limited Gemini narration of the computed metrics (local-template fallback) |
+| `GET /narrate/{id}` | Redis rate-limited Gemini narration of the computed metrics — 180–220 words, mathematically detailed, plain text (local-template fallback) |
+| `POST /ask` | judge Q&A: Gemini answers grounded in PRESENTATION_GUIDE.md + the mathematics plan + the explainer document — never in general knowledge |
 | `POST /analyze_upload` | plain image → SFS relief → terrain payload; `make_scene=true` promotes it to a full matchable scene with auto-selected reference |
 | `POST /ingest_product_upload` | ISRO PDS4 XML+IMG pair, NASA PDS3 pair, or a ZIP of the product directory → full matchable scene |
 | `POST /ingest_product` | server-side path ingestion of any `data/raw` product, any crop window |
@@ -136,11 +142,15 @@ Sentry, Gemini. The app is fully functional with none of them.
    scenes + metrics; writes go through the backend-only service key).
 4. **Concurrency**: sync endpoints run in Starlette's threadpool, so
    CPU-bound inference never blocks the event loop; uploads are `async`.
-5. **Narration**: `GET /narrate/{id}` → Redis sorted-set sliding window
+5. **Narration + Q&A**: `GET /narrate/{id}` → Redis sorted-set sliding window
    (20/min) → metrics summary built ONLY from computed values → Gemini
-   (`gemini-flash-lite-latest`, free tier) → ≤120-word explanation.
-   Fallbacks: 429 → one warning + 5-minute cooldown; any failure →
-   local-template narration with identical numbers.
+   (`gemini-flash-lite-latest`, free tier) → 180–220-word mathematically
+   detailed explanation, sanitized to plain text (no LaTeX/markdown
+   artifacts). Fallbacks: 429 → one warning + 5-minute cooldown; any
+   failure → local-template narration with identical numbers.
+   `POST /ask` → the judge's question is answered from the project's own
+   documents (presentation guide, mathematics plan, explainer) loaded at
+   startup into the prompt — rate-limited at half the narration budget.
 6. **Error tracking**: Sentry on both sides (browser project + backend
    project, breadcrumbs per pipeline stage, `/debug/sentry-test`).
 7. **Frontend boot is resilient**: health failures retry with backoff,

@@ -449,7 +449,26 @@ if (window.SENTRY_DSN_FRONTEND) {
         <button id="speakBtn2" class="ghost">🗣️ READ ALOUD</button>
       </div>
     </div>
-  </div>
+
+    <div class="panel raised">
+      <h2>Judge Q&amp;A <em>/ Gemini, grounded in PRESENTATION_GUIDE + the explainer — ask anything</em></h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <input id="askInput" type="text" placeholder="Ask about the maths, the pipeline, the mission data… e.g. How is the RANSAC budget derived?"
+               style="flex:1 1 340px; padding:12px 14px; border:1px solid var(--line, #ccc); border-radius:10px; font:inherit; background:transparent; color:inherit" />
+        <button id="askBtn" class="ghost">🤔 ASK GEMINI</button>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px">
+        <button class="ghost chip" style="font-size:12px; padding:6px 10px" data-q="Why is the cross-mission match only about 2.5 percent, and what does that honestly mean?">Why 2.5%?</button>
+        <button class="ghost chip" style="font-size:12px; padding:6px 10px" data-q="Walk me through the mathematics: how is the RANSAC iteration budget k derived, and how do you estimate crater depth from shadows?">The mathematics</button>
+        <button class="ghost chip" style="font-size:12px; padding:6px 10px" data-q="What role does the ONNX learned descriptor play, and how was it trained?">ONNX role</button>
+        <button class="ghost chip" style="font-size:12px; padding:6px 10px" data-q="How do you reconstruct 3D terrain from a single image, and what are the limits?">Terrain from one image</button>
+        <button class="ghost chip" style="font-size:12px; padding:6px 10px" data-q="How would TMC-2 and future IRS data upgrade this project?">Future: TMC-2 / IRS</button>
+      </div>
+      <div class="narration-out" id="askOut" style="margin-top:14px">Answers are grounded in the presentation guide, the mathematics plan and the explainer document — never in general knowledge.</div>
+      <div class="mono-line" id="askMeta" style="margin-top:10px"></div>
+      <button id="askSpeakBtn" class="ghost" style="margin-top:10px">🗣️ READ ANSWER ALOUD</button>
+    </div>
+   </div>
 </section>
 
 <footer>
@@ -788,6 +807,73 @@ $("speakBtn").addEventListener("click", speakToggle);
 $("speakBtn2").addEventListener("click", speakToggle);
 /* warm up the voice list (some browsers load it async) */
 if ("speechSynthesis" in window) speechSynthesis.getVoices();
+
+/* ---- judge Q&A: grounded in PRESENTATION_GUIDE + explainer via /ask ---- */
+async function ask(question) {
+  const q = (question || $("askInput").value || "").trim();
+  if (!q) {
+    $("askOut").textContent = "Type a question first (or tap one of the suggestion chips).";
+    return;
+  }
+  $("askInput").value = q;
+  const out = $("askOut");
+  out.classList.add("skel", "block");
+  $("askBtn").textContent = "THINKING…";
+  let j = null, lastErr = null;
+  /* one automatic retry — a hotspot blip shouldn't kill the answer */
+  for (let attempt = 0; attempt < 2 && !j; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, 3000));
+    try {
+      const r = await fetchT(API + "/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q }),
+      }, 120000);
+      if (r.status === 429) {
+        out.classList.remove("skel", "block");
+        $("askBtn").textContent = "🤔 ASK GEMINI";
+        out.textContent = "Rate limited — the sliding-window limiter is working as designed. Try again in a minute.";
+        return;
+      }
+      j = await r.json();
+    } catch (e) { lastErr = e; }
+  }
+  $("askBtn").textContent = "🤔 ASK GEMINI";
+  out.classList.remove("skel", "block");
+  if (!j || j.answer === undefined) {
+    out.textContent = "Q&A unavailable — " + (lastErr ? lastErr.message :
+      "unknown error") + " — try again once the status badge is green.";
+    return;
+  }
+  if (j.answer === null) {
+    out.textContent = "[" + j.source + "] " + (j.hint ||
+      "Gemini is unavailable right now.");
+    return;
+  }
+  out.textContent = "[Gemini · grounded] " + j.answer;
+  $("askMeta").textContent = "grounded in: " + (j.grounded_docs || []).join(" · ") +
+    (j.rate_used != null ? " · Q&A calls this minute: " + j.rate_used : "");
+}
+$("askBtn").addEventListener("click", () => ask());
+$("askInput").addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
+document.querySelectorAll("#view-narrate .chip").forEach(ch =>
+  ch.addEventListener("click", () => ask(ch.dataset.q)));
+/* read the ANSWER aloud (separate from the narration voice) */
+$("askSpeakBtn").addEventListener("click", () => {
+  if (!("speechSynthesis" in window)) return;
+  const raw = ($("askOut").textContent || "").replace(/^\[[^\]]+\]\s*/, "");
+  if (!raw || raw.indexOf("Answers are grounded") === 0 ||
+      raw.indexOf("Q&A unavailable") === 0 || raw.indexOf("Rate limited") === 0 ||
+      raw.indexOf("Type a question") === 0) return;
+  const u = new SpeechSynthesisUtterance(raw);
+  u.rate = 1; u.lang = "en-US";
+  const voices = speechSynthesis.getVoices();
+  const v = voices.find(v => /en[-_](GB|US)/i.test(v.lang) && /google|natural|zira|samantha/i.test(v.name)) ||
+            voices.find(v => /^en/i.test(v.lang));
+  if (v) u.voice = v;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+});
 $("runBtn").addEventListener("click", runMatch);
 window.__runMatch = runMatch;
 /* NOTE: window.__checkHealth / window.__loadScenes are assigned in the

@@ -25,6 +25,8 @@ function magicEl() {
 const documentStub = {
   getElementById: () => magicEl(),
   createElement: () => magicEl(),
+  querySelectorAll: () => [],
+  querySelector: () => magicEl(),
   head: magicEl(),
   addEventListener() {}
 };

@@ -117,8 +117,9 @@ candidates + derived RANSAC budget).
 | **▶ RUN MATCH** | `GET /match/{id}` → cache-aside (in-memory → Redis → fresh compute) → the whole Stage 3–6 pipeline. First run computes; later runs are instant (cache). | "First click computes for real; the cache layer is shown right there in the panel." |
 | **Match ring (inverted black card)** | Inlier ratio, animated SVG ring. | "Inliers = keypoints that survive geometric verification. This is the single headline number." |
 | **inliers / RMSE px / kp source / kp reference / cache layer** | Inlier count; reprojection RMSE over inliers (sub-pixel on good scenes); keypoint counts on both images; which cache tier answered. | "RMSE is the geometric error of the homography over the surviving matches — measured in pixels." |
-| **🔊 NARRATE FOR JUDGES** | `GET /narrate/{id}` → Gemini, narrating ONLY the computed metrics. Rate-limited to 20/min by a Redis sliding window. The text also appears right here in this window. | See section 7. |
+| **🔊 NARRATE FOR JUDGES** | `GET /narrate/{id}` → Gemini, narrating ONLY the computed metrics — 180–220 words that walk through the mathematics (derived RANSAC budget, RMSE meaning, shadow-depth formula, Cramér–Rao floor), sanitized to plain text. Rate-limited to 20/min by a Redis sliding window. The text also appears right here in this window. | See section 7. |
 | **🗣️ READ ALOUD** | Speaks the narration out loud via the browser's built-in speech engine (offline, no API key). Click again to stop. | "And it talks, too — the same verified numbers, spoken." |
+| **Judge Q&A (04 NARRATION tab)** | `POST /ask` → Gemini answers the judge's question grounded in PRESENTATION_GUIDE.md + the mathematics plan + the explainer document (loaded at startup). Suggestion chips cover the classic judge questions; answers show which documents grounded them. | "You can grill the AI itself — it answers from OUR documents, not from general knowledge." |
 | **Method breakdown** (muted panel) | SIFT candidates vs **learned (ONNX)** candidates vs the **derived** RANSAC budget `k ≥ log(1−p)/log(1−w⁴)`. | "The RANSAC iteration count is derived live from the matcher's own inlier fraction — never hard-coded." |
 | **Scene metadata** (muted panel) | Product ID, acquisition time, band, footprint lat/lon, GSD, sun elevation/azimuth, incidence angle, DEM range, provenance note. | "Full traceability. Every number on screen comes from the mission's own metadata files." |
 | **Correspondences canvas** | Left = SOURCE (CH-2 OHRC), right = REFERENCE (caption says WHICH reference was auto-picked, e.g. `REAL LROC NAC — AUTO-SELECTED`). White dots = matches; bright/large = RANSAC inliers, faint = rejected. | "Bright dots survived geometric verification; faint dots were rejected. The matcher shows its own work." |
@@ -312,13 +313,28 @@ de-rotation gives translation (Reddy–Chatterji). Reported as a diagnostic.
 `I(A;B) = Σ p(a,b)·log[p(a,b)/(p(a)p(b))] ≥ 0` — the cross-modal similarity
 statistic reserved for future multi-sensor (IRS-class) registration.
 
-## 9 · How Gemini narration works
+## 9 · How Gemini narration + judge Q&A work
 
 `GET /narrate/{id}` → **Redis sorted-set sliding-window rate limit**
 (ZADD → ZREMRANGEBYSCORE → ZCARD, 20/min) → a metrics summary built **only**
 from values the pipeline computed → Gemini (`gemini-flash-lite-latest`,
-free tier) → ≤120-word judge-facing explanation. The UI prefixes the source:
-`[Gemini]` or `[local template]`.
+free tier) → **180–220-word, mathematically detailed** judge-facing
+explanation: it walks through the derived RANSAC budget
+`k ≥ ln(1−p)/ln(1−w⁴)` (p = 0.999, 4-point homography), what reprojection
+RMSE means, crater depth = shadow length × tan(sun elevation), and the
+Cramér–Rao RMSE floor. The prompt forbids LaTeX/markdown AND
+`integrations.py::clean_llm_text` strips any `$…$`, `\%`, backticks or
+bold markers that slip through — the judge only ever sees plain prose.
+The UI prefixes the source: `[Gemini]` or `[local template]`.
+
+**Judge Q&A (`POST /ask`, 04 NARRATION tab):** the question is embedded in
+a prompt together with the project's own documents — `PRESENTATION_GUIDE.md`,
+`SIH26166_Implementation_Plan_and_Mathematics.md`, and the extracted text of
+`explainer.md.pdf` (`backend/knowledge/explainer_md.txt`, committed) — all
+loaded once at startup. Gemini must ground every claim in those documents
+and may not invent specific numbers. Rate-limited at half the narration
+budget; the UI shows which documents grounded each answer, and
+🗣️ READ ANSWER ALOUD speaks it.
 
 **The guardrail (say this to judges):** Gemini narrates; it is never allowed
 to generate numbers. The prompt receives only computed metrics, and every
@@ -629,12 +645,16 @@ pair together) → backend parses the PDS4 label, builds the scene
 automatically (~6 s), selects it in 01 MATCH: 4 craters detected, full
 pipeline run, reference auto-selected.
 
-**T9 · Gemini narration + voice.** 01 MATCH (any scene) → 🔊 NARRATE FOR
-JUDGES → `[Gemini]` + ≤120-word summary quoting the computed metrics
+**T9 · Gemini narration + voice + judge Q&A.** 01 MATCH (any scene) →
+🔊 NARRATE FOR JUDGES → `[Gemini]` + a 180–220-word, math-detailed summary
+quoting the computed metrics with NO `$…$`/backtick artifacts
 (rate-limited to 20/min by a Redis sliding window — that's the limiter
-working if you ever see a rate-limit message). Also try 04 NARRATION tab.
-Then click **🗣️ READ ALOUD** — the browser's speech engine reads the
-narration to the room (offline, no API key); click again to stop.
+working if you ever see a rate-limit message). Then click
+**🗣️ READ ALOUD** — the browser's speech engine reads the narration to the
+room (offline, no API key); click again to stop. Then the 04 NARRATION tab
+→ tap the **"The mathematics"** chip (or type any question) →
+`[Gemini · grounded]` answer in ≤250 words, with the grounded documents
+listed beneath it — the live proof of the Q&A feature.
 
 **T10 · Persistence check (optional).** `data/processed/registry.json`
 now lists the scenes you created; each has `source.png / reference.png /
