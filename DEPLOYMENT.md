@@ -1,5 +1,11 @@
 # SIH26166 — Deployment & Integrations Guide
 
+> **Want the whole project online with ONE shareable link (and nothing
+> stored on your laptop)?** Follow **`deploy/DEPLOY_ONLINE.md`** —
+> HF dataset repo for the ~29 GB data + one HF Space serving backend,
+> API, ONNX and frontend same-origin. The Render/Vercel path below is
+> the lighter-weight backup option.
+
 Everything here is optional: the demo runs fully on localhost with **zero keys**
 (TIER 0). Follow sections in order only for what you need.
 
