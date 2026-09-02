@@ -51,3 +51,12 @@ data/reference/tmc/*/dtm.tif
 data/reference/tmc/*/dtm.tif.part
 data/reference/iirs/*/cube.qub
 data/reference/iirs/*/cube.qub.part
+
+# ---- local raw archives (never commit; live on Kaggle Drive datasets) ----
+/ch2_*.tar
+/ch2_iir_*.zip
+backend/models/*.onnx.bak
+!data/processed/tmc2_metric_demo/
+!data/processed/tmc2_metric_demo/**
+!data/processed/iirs_mineral_demo/
+!data/processed/iirs_mineral_demo/**
