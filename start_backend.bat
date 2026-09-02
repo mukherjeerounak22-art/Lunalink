@@ -87,7 +87,7 @@ set /a TRIES=0
 :waitloop
 if defined TURL goto goturl
 set /a TRIES+=1
-if %TRIES% GEQ 45 goto nourl
+if %TRIES% GEQ 75 goto nourl
 timeout /t 2 /nobreak >nul
 if not exist "%TLOG%" goto waitloop
 for /f "usebackq tokens=*" %%L in (`findstr /c:"trycloudflare.com" "%TLOG%" 2^>nul`) do (
@@ -116,8 +116,15 @@ pause
 exit /b 0
 
 :nourl
+rem one last look - on a slow hotspot the tunnel may register just after the window
+for /f "usebackq tokens=*" %%L in (`findstr /c:"trycloudflare.com" "%TLOG%" 2^>nul`) do (
+  for %%u in (%%L) do (
+    echo %%u | findstr /b /c:"https://" >nul && set "TURL=%%u"
+  )
+)
+if defined TURL goto goturl
 echo.
-echo Tunnel did not report a URL within 90 s - check the log:
+echo Tunnel did not report a URL within 150 s - check the log:
 echo   %TLOG%
 echo The backend is still running at http://127.0.0.1:8000
 pause
