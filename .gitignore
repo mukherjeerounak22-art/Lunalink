@@ -61,5 +61,9 @@ backend/models/*.onnx.bak
 !data/processed/iirs_mineral_demo/
 !data/processed/iirs_mineral_demo/**
 
-data/reference/tmc/*/metric_dem.npy
-data/reference/iirs/*/minerals.npz
+# ---- layer result caches ARE committed (tiny, ~880 KB total) so a fresh
+# Render clone serves the FULL 5-layer experience with zero big rasters:
+#   data/reference/tmc/*/metric_dem.npy  (192^2 metric heights/product)
+#   data/reference/iirs/*/minerals.npz   (classified mineral maps)
+# layers.py is cache-first: these short-circuit before any dtm.tif /
+# cube.qub access, so the multi-GB rasters never need to exist.

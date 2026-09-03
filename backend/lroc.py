@@ -60,6 +60,53 @@ def all_products():
     return out
 
 
+def ensure_library():
+    """One-time fetch of the LRO NAC strip library from a PUBLIC Kaggle
+    dataset when the local library is empty - this is what keeps free-tier
+    deploys (Render free: 512 MB RAM, ephemeral disk) capable of REAL NASA
+    auto-selection for uploaded scenes.  Set
+        KAGGLE_LRO_DATASET=<owner>/<dataset-slug>
+    (dataset contains the *.IMG + *.xml pairs, at its root or any
+    subfolder; no Kaggle credentials needed for public datasets).  The
+    strips are np.memmap-read, so RAM stays flat; files are symlinked out
+    of the kagglehub cache so only one copy exists on disk.  Any failure
+    returns False and the caller degrades to a simulated second pass."""
+    if all_products():
+        return True
+    slug = os.environ.get("KAGGLE_LRO_DATASET", "").strip()
+    if not slug:
+        return False
+    try:
+        import kagglehub
+        print("lroc: strip library empty - pulling %s from Kaggle "
+              "(one-time per instance, ~3 GB; honest cold-start cost)"
+              % slug)
+        base = kagglehub.dataset_download(slug)
+        os.makedirs(LRO_DIR, exist_ok=True)
+        n = 0
+        for root, _, files in os.walk(base):
+            for fn in files:
+                if not fn.lower().endswith((".img", ".xml")):
+                    continue
+                src = os.path.join(root, fn)
+                dst = os.path.join(LRO_DIR, fn)
+                if os.path.exists(dst):
+                    n += 1
+                    continue
+                try:
+                    os.symlink(src, dst)
+                except OSError:
+                    import shutil
+                    shutil.copy2(src, dst)
+                n += 1
+        print("lroc: linked %d strip files from the Kaggle cache" % n)
+        return bool(all_products())
+    except Exception as exc:                                 # noqa: BLE001
+        print("lroc: Kaggle fetch failed (%s) - uploads will fall back "
+              "to a simulated second pass" % str(exc)[:140])
+        return False
+
+
 def coarse_preview(prod, factor=8):
     """Coarse preview of the whole NAC strip at ~factor NAC pixels per cell
     (factor=8 -> ~4 m/cell). Returns uint8 (lines/factor, samples/factor)."""

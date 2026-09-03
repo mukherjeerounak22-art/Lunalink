@@ -150,6 +150,12 @@ def auto_select_reference(img, max_candidates=None, min_ncc=0.35):
         import lroc
         prods = lroc.all_products()
         if not prods:
+            # free-tier deploy (Render et al.): pull the strip library
+            # from the public Kaggle dataset once, then retry - degrades
+            # to the simulated second pass if that fails too
+            if lroc.ensure_library():
+                prods = lroc.all_products()
+        if not prods:
             return None, {"note": "reference library empty - simulated "
                                   "second pass generated"}
         img_u8 = np.clip(img, 0, 255).astype(np.uint8)  # select_best expects 8-bit
