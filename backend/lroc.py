@@ -170,21 +170,56 @@ def build_reference(src_u8, prod, loc, factor=8, out=1024):
     sub8 = np.clip((sub - lo) / (hi - lo + 1e-9) * 255, 0, 255)
     sub8 = np.nan_to_num(sub8).astype(np.uint8)
 
-    # resample region onto the OHRC grid scale (~1.06 m/px): NAC region
-    # spans side_full NAC px over the same ground as 1024 OHRC-grid px
-    region = cv2.resize(sub8, (out, out), interpolation=cv2.INTER_AREA)
+    # resample region onto the OHRC grid scale (~1.06 m/px) PRESERVING
+    # ground scale: the naive square-resize of an edge-clipped window
+    # introduced anisotropic scale errors of up to ~30%, which broke
+    # template/SIFT alignment (matches at the coarse scale fell apart at
+    # full resolution)
+    gsd_src = 4 * 0.26488811295333897          # OHRC analysis grid m/px
+    base_scale = 0.5 / gsd_src                  # NAC px -> grid px at 0.5 m
+    w0 = max(64, int(round((c1 - c0) * base_scale)))
+    h0 = max(64, int(round((r1 - r0) * base_scale)))
+    content0 = cv2.resize(sub8, (w0, h0), interpolation=cv2.INTER_AREA)
 
-    # translation pre-alignment: locate the region's central block inside
-    # the OHRC source, then shift so both frames coincide
-    trans = None
-    t = 512
-    tpl = region[(out - t) // 2:(out + t) // 2, (out - t) // 2:(out + t) // 2]
-    res = cv2.matchTemplate(src_u8, tpl, cv2.TM_CCOEFF_NORMED)
-    _, sc, _, loc2 = cv2.minMaxLoc(res)
-    dx, dy = loc2[0] - (out - t) // 2, loc2[1] - (out - t) // 2
-    region = cv2.warpAffine(region, np.float32([[1, 0, -dx], [0, 1, -dy]]),
+    # NAC GSD varies with LRO's elliptical orbit (0.42-2.17 m/px), so the
+    # 0.5 m/px assumption is only a starting point - SELF-CALIBRATE by
+    # sweeping the resample factor and keeping the best-aligned attempt
+    best = None                                  # (ncc, region, trans)
+    for f in (1.0, 0.8, 1.25, 0.63, 1.58, 0.5, 2.0, 0.4, 2.5):
+        w_px, h_px = max(64, int(w0 * f)), max(64, int(h0 * f))
+        if w_px > 4096 or h_px > 4096:
+            continue
+        content = cv2.resize(content0, (w_px, h_px),
+                             interpolation=cv2.INTER_AREA)
+        region = np.zeros((out, out), np.uint8)
+        ox, oy = (out - w_px) // 2, (out - h_px) // 2
+        sx, sy = max(0, -ox), max(0, -oy)      # content crop when larger
+        dx0, dy0 = max(0, ox), max(0, oy)      # canvas paste origin
+        w_copy = min(w_px - sx, out - dx0)
+        h_copy = min(h_px - sy, out - dy0)
+        region[dy0:dy0 + h_copy, dx0:dx0 + w_copy] = \
+            content[sy:sy + h_copy, sx:sx + w_copy]
+
+        # translation pre-alignment: locate the region's central block
+        # inside the OHRC source, then shift so both frames coincide
+        t = min(512, w_copy // 2 * 2, h_copy // 2 * 2)
+        if t < 128:
+            continue
+        tpl = region[(out - t) // 2:(out + t) // 2,
+                     (out - t) // 2:(out + t) // 2]
+        res = cv2.matchTemplate(src_u8, tpl, cv2.TM_CCOEFF_NORMED)
+        _, sc, _, loc2 = cv2.minMaxLoc(res)
+        if best is None or sc > best[0]:
+            dx, dy = loc2[0] - (out - t) // 2, loc2[1] - (out - t) // 2
+            best = (float(sc), region.copy(),
+                    {"dx": int(dx), "dy": int(dy), "ncc": round(float(sc), 3)},
+                    f)
+    if best is None:
+        return None, {"error": "overlap region too small after rescale"}
+    sc, region, trans, f_best = best
+    region = cv2.warpAffine(region, np.float32([[1, 0, -trans["dx"]],
+                                                [0, 1, -trans["dy"]]]),
                             (out, out))
-    trans = {"dx": int(dx), "dy": int(dy), "ncc": round(float(sc), 3)}
 
     # SIFT refinement: align region to the OHRC source grid
     sift = cv2.SIFT_create(nfeatures=4000, contrastThreshold=0.02)
@@ -208,6 +243,7 @@ def build_reference(src_u8, prod, loc, factor=8, out=1024):
     meta = {"product_id": prod["product_id"], "inliers": inliers,
             "sift_refined": H is not None,
             "translation": trans,
+            "nac_gsd_est": round(0.5 / f_best, 3),
             "region_full_px": [c0, r0, c1, r1],
             "start": prod["start"], "stop": prod["stop"],
             "scale_note": "NAC CDR (~0.5 m/px) resampled onto the OHRC "
