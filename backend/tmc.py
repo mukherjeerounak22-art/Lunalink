@@ -285,6 +285,74 @@ def _valid_bbox(gray):
     return int(cols[0]), int(cols[-1]) + 1, int(rows[0]), int(rows[-1]) + 1
 
 
+def _wrap_lon(lon):
+    return lon % 360.0
+
+
+def geo_uv(corners, center):
+    """Inverse-bilinear (fx, fy) locating a selenographic center inside a
+    product's footprint quad.  Robust to polar swaths (huge lon spreads)
+    and lon wrap: every corner longitude is wrap-centred on the target
+    before solving.  Returns None when the center lies outside the quad."""
+    if not corners or not center:
+        return None
+    clon = _wrap_lon(float(center["lon_deg"]))
+    clat = float(center["lat_deg"])
+
+    def rel(c):
+        c = corners.get(c) or {}
+        if "lat_deg" not in c or "lon_deg" not in c:
+            return None
+        return (((c["lon_deg"] - clon + 180.0) % 360.0 - 180.0),
+                float(c["lat_deg"]) - clat)
+
+    ul, ur = rel("upper_left"), rel("upper_right")
+    ll, lr = rel("lower_left"), rel("lower_right")
+    if None in (ul, ur, ll, lr):
+        return None
+
+    def bilin(fx, fy):
+        tx = ul[0] * (1 - fx) + ur[0] * fx
+        ty = ul[1] * (1 - fx) + ur[1] * fx
+        bx = ll[0] * (1 - fx) + lr[0] * fx
+        by = ll[1] * (1 - fx) + lr[1] * fx
+        return (tx * (1 - fy) + bx * fy, ty * (1 - fy) + by * fy)
+
+    fx, fy = 0.5, 0.5
+    for _ in range(80):
+        px, py = bilin(fx, fy)
+        if abs(px) < 1e-10 and abs(py) < 1e-10:
+            break
+        h = 1e-6
+        fx1, fx0 = min(1.0, fx + h), max(0.0, fx - h)
+        fy1, fy0 = min(1.0, fy + h), max(0.0, fy - h)
+        p1, p2 = bilin(fx1, fy), bilin(fx0, fy)
+        p3, p4 = bilin(fx, fy1), bilin(fx, fy0)
+        j11 = (p1[0] - p2[0]) / ((fx1 - fx0) or h)
+        j21 = (p1[1] - p2[1]) / ((fx1 - fx0) or h)
+        j12 = (p3[0] - p4[0]) / ((fy1 - fy0) or h)
+        j22 = (p3[1] - p4[1]) / ((fy1 - fy0) or h)
+        det = j11 * j22 - j12 * j21
+        if abs(det) < 1e-12:
+            break
+        fx = min(1.3, max(-0.3, fx - (j22 * px - j12 * py) / det))
+        fy = min(1.3, max(-0.3, fy - (-j21 * px + j11 * py) / det))
+    if 0.0 <= fx <= 1.0 and 0.0 <= fy <= 1.0:
+        return fx, fy
+    return None
+
+
+def geo_point(corners, H, W, center):
+    """Pixel (x, y) of a selenographic center inside an HxW product image
+    georeferenced by its footprint corners (inverse-bilinear, polar-swath
+    safe); None when outside coverage."""
+    uv = geo_uv(corners, center)
+    if uv is None or not H or not W:
+        return None
+    fx, fy = uv
+    return (int(fx * (W - 1)), int(fy * (H - 1)))
+
+
 def footprint_distance(prod, src_center):
     """Great-circle km between the product footprint center and the source
     center dict {lat_deg, lon_deg} (None when either lacks coordinates)."""
@@ -306,6 +374,7 @@ def select_best(src_u8, prods, src_center=None):
     cands = []
     for prod in prods:
         ncc, loc, scale = -1.0, None, None
+        geo = None
         thumb = _browse_gray(prod)
         if thumb is not None:
             th = cv2.resize(thumb, (512, 512), interpolation=cv2.INTER_AREA) \
@@ -331,10 +400,19 @@ def select_best(src_u8, prods, src_center=None):
                 sy_ = thumb.shape[0] / float(th.shape[0])
                 sx_ = thumb.shape[1] / float(th.shape[1])
                 loc = (int(loc[0] * sx_), int(loc[1] * sy_))
+            # geographic seeding: where the SOURCE CENTER actually falls
+            # inside this product (footprint-corner georeferencing) beats
+            # the cross-modal NCC guess - a visually-similar patch of a
+            # DIFFERENT region must never be shown as "the" reference
+            geo = geo_point((prod.get("geometry") or {})
+                            .get("footprint_corners"),
+                            thumb.shape[0], thumb.shape[1], src_center) \
+                if src_center else None
         km = footprint_distance(prod, src_center)
         geo_score = (1.0 / (1.0 + km / 50.0)) if km is not None else 0.0
         score = 0.6 * geo_score + 0.4 * max(0.0, ncc)
         cands.append((prod, {"loc": loc, "scale": scale,
+                             "geo_loc": geo,
                              "thumb_shape": [int(thumb.shape[0]),
                                              int(thumb.shape[1])]
                              if thumb is not None else None,
@@ -357,7 +435,14 @@ def build_reference(src_u8, prod, cand, out=1024):
         return None, {"error": "no browse thumbnail cached for %s"
                               % prod["product_id"]}
     loc, scale = cand.get("loc"), cand.get("scale")
+    geo_loc = cand.get("geo_loc")
     th_hw = cand.get("thumb_shape") or list(thumb.shape)
+    if geo_loc is not None:
+        # GEOGRAPHIC truth wins: this is where the scene's coordinates
+        # actually fall inside the product (the cross-modal NCC loc can
+        # match a visually-similar patch of a different region)
+        loc = geo_loc
+        scale = max(scale or 0.12, 0.12)
     if loc is None:                     # no coarse location - valid center
         loc = (thumb.shape[1] // 2, thumb.shape[0] // 2)
         scale = 0.24

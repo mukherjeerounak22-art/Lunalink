@@ -19,120 +19,79 @@
     "sun_elevation_deg": 30.0
   },
   "tmc_reference": {
-    "status": "selected",
+    "status": "no_coverage",
     "product_id": "ch2_tmc_ndn_20231024T1624371836_d_dtm_d18",
-    "mission": "Chandrayaan-2",
-    "instrument": "terrain mapping camera",
-    "product_kind": "DTM (derived)",
-    "footprint_km": 0.0,
-    "footprint_center": {
-      "lat_deg": -74.0415665,
-      "lon_deg": 203.79184075
-    },
-    "coarse_ncc": 0.392,
-    "translation": {
-      "dx": -256,
-      "dy": 84,
-      "ncc": 0.413
-    },
-    "sift_refined": true,
-    "inliers": 11,
-    "post_alignment_ncc": -0.033,
-    "mutual_information": 0.005,
-    "cross_modal_note": "TMC DTM shaded-relief browse vs panchromatic OHRC radiance - different sensor physics; mutual information reported alongside NCC",
-    "sun": {
-      "sun_azimuth_deg": 284.37791,
-      "sun_elevation_deg": 6.637774
-    },
-    "scale_note": "browse thumbnail resampled onto the OHRC 1024^2 analysis grid and SIFT-refined (11 inliers)"
+    "footprint_km": null,
+    "note": "no TMC/TMC-2 product on disk covers this scene's coordinates (nearest ch2_tmc_ndn_20231024T1624371836_d_dtm_d18, 1826 km away) - the reference stays honestly empty instead of showing a wrong region"
   },
   "tmc_reference_ranked": [
     {
       "product_id": "ch2_tmc_ndn_20231024T1624371836_d_dtm_d18",
       "mission": "Chandrayaan-2",
       "instrument": "terrain mapping camera",
-      "footprint_km": 0.0,
+      "footprint_km": 1825.9,
       "coarse_ncc": 0.392,
-      "score": 0.757
+      "score": 0.173
     },
     {
-      "product_id": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18",
+      "product_id": "ch2_tmc_ndn_20231105T0344013627_d_dtm_d18",
       "mission": "Chandrayaan-2",
       "instrument": "terrain mapping camera",
-      "footprint_km": 14.2,
-      "coarse_ncc": 0.359,
-      "score": 0.611
+      "footprint_km": 1729.4,
+      "coarse_ncc": 0.389,
+      "score": 0.173
     },
     {
       "product_id": "ch2_tmc_ndn_20231024T0832339656_d_dtm_d18",
       "mission": "Chandrayaan-2",
       "instrument": "terrain mapping camera",
-      "footprint_km": 27.2,
+      "footprint_km": 1813.2,
       "coarse_ncc": 0.369,
-      "score": 0.536
+      "score": 0.164
     },
     {
-      "product_id": "ch2_tmc_ndn_20231106T1903368442_d_dtm_d18",
+      "product_id": "ch2_tmc_ndn_20231024T1228346956_d_dtm_d18",
       "mission": "Chandrayaan-2",
       "instrument": "terrain mapping camera",
-      "footprint_km": 41.0,
-      "coarse_ncc": 0.347,
-      "score": 0.469
+      "footprint_km": 1820.5,
+      "coarse_ncc": 0.359,
+      "score": 0.16
     },
     {
-      "product_id": "ch2_tmc_ndn_20231106T2259374129_d_dtm_d18",
+      "product_id": "ch2_tmc_ndn_20230531T1155238230_d_dtm_d32",
       "mission": "Chandrayaan-2",
       "instrument": "terrain mapping camera",
-      "footprint_km": 45.3,
-      "coarse_ncc": 0.351,
-      "score": 0.455
+      "footprint_km": 4472.5,
+      "coarse_ncc": 0.379,
+      "score": 0.158
     }
   ],
   "iirs_reference": {
-    "status": "selected",
+    "status": "no_coverage",
     "product_id": "ch2_iir_nci_20221227T0748212038_d_img_d32",
-    "mission": "Chandrayaan-2",
-    "instrument": "imaging infrared spectrometer",
-    "product_kind": "spectral cube (256 bands)",
-    "footprint_km": 215.9,
-    "footprint_center": {
-      "lat_deg": -67.937113,
-      "lon_deg": 215.1975775
-    },
-    "coarse_ncc": 0.236,
-    "translation": {
-      "dx": 256,
-      "dy": 236,
-      "ncc": 0.23
-    },
-    "mutual_information": 0.051,
-    "cross_modal_note": "IIRS spectral projection vs panchromatic OHRC radiance - mutual information is the governing cross-modal statistic (Problem 6)",
-    "sun": {
-      "sun_azimuth_deg": 12.491345,
-      "sun_elevation_deg": 21.685496
-    },
-    "scale_note": "grayscale projection resampled onto the OHRC 1024^2 analysis grid (template-aligned)"
+    "footprint_km": null,
+    "note": "no IIRS product on disk covers this scene's coordinates (nearest ch2_iir_nci_20221227T0748212038_d_img_d32, 1921 km away) - the reference stays honestly empty instead of showing a wrong region"
   },
   "iirs_reference_ranked": [
     {
       "product_id": "ch2_iir_nci_20221227T0748212038_d_img_d32",
       "mission": "Chandrayaan-2",
       "instrument": "imaging infrared spectrometer",
-      "footprint_km": 215.9,
+      "footprint_km": 1921.0,
       "coarse_ncc": 0.236,
-      "score": 0.207
+      "score": 0.11
     },
     {
       "product_id": "ch2_iir_nci_20231222T0751377198_d_img_d18",
       "mission": "Chandrayaan-2",
       "instrument": "imaging infrared spectrometer",
-      "footprint_km": 535.0,
+      "footprint_km": 2087.3,
       "coarse_ncc": 0.187,
-      "score": 0.126
+      "score": 0.089
     }
   ],
   "source_footprint_center": {
-    "lat_deg": -74.0415665,
-    "lon_deg": 203.79184075
+    "lat_deg": -43.37,
+    "lon_deg": 348.68
   }
 }

@@ -433,6 +433,19 @@ if (window.SENTRY_DSN_FRONTEND) {
         <div class="note">Bright slopes facing the assumed sun azimuth become ridges.
         Tip: match the azimuth to the shadow direction in your image for best relief.</div>
         <div class="mono-line" id="sunMode" style="margin-top:8px">AUTO · fits itself from the selected scene's mission metadata</div>
+        <div style="margin-top:14px">
+          <div class="range-row">
+            <label for="latInput">Latitude °</label>
+            <input type="number" id="latInput" step="0.0001" min="-90" max="90"
+                   placeholder="auto" style="flex:1">
+          </div>
+          <div class="range-row">
+            <label for="lonInput">Longitude °</label>
+            <input type="number" id="lonInput" step="0.0001" min="-360" max="360"
+                   placeholder="auto" style="flex:1">
+          </div>
+          <div class="mono-line" id="geoMode" style="margin-top:8px">AUTO · filled from the selected scene's footprint (override for off-scene uploads)</div>
+        </div>
       </div>
     </div>
 
@@ -632,6 +645,12 @@ function renderSceneMeta() {
      sun-parameter values (unless the user manually overrode them) */
   if (window.__setSun && sun.sun_azimuth_deg != null) {
     window.__setSun(sun.sun_azimuth_deg, sun.sun_elevation_deg ?? 30);
+  }
+  /* auto-fill the UPLOAD window's geolocation from this scene's footprint
+     (drives the cross-instrument reference selection for uploads) */
+  const fc = m.source_footprint_center;
+  if (window.__setCoords && fc && fc.lat_deg != null) {
+    window.__setCoords(fc.lat_deg, fc.lon_deg);
   }
 }
 /* module 2 owns the match cache & pipeline; reach them via window so this
@@ -1091,6 +1110,28 @@ $("elRange").addEventListener("input", () => {
   if (lastPayload) renderHillshade(lastPayload);
 });
 
+/* auto-fill geolocation from the selected scene's footprint (drives the
+   cross-instrument reference selection for uploads; manual override allowed) */
+let coordsTouched = false;
+window.__setCoords = (la, lo) => {
+  if (coordsTouched || la == null || lo == null) return;
+  const li = $("latInput"), lo_i = $("lonInput");
+  if (!li || !lo_i) return;
+  li.value = Number(la).toFixed(4);
+  lo_i.value = Number(lo).toFixed(4);
+  const gm = $("geoMode");
+  if (gm) gm.textContent = "AUTO · scene footprint — lat " + Number(la).toFixed(4) +
+    "° / lon " + Number(lo).toFixed(4) + "° (type to override)";
+};
+["latInput", "lonInput"].forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener("input", () => {
+    coordsTouched = true;
+    const gm = $("geoMode");
+    if (gm) gm.textContent = "MANUAL override — auto-fill disabled until page reload";
+  });
+});
+
 async function analyze(file) {
   lastFile = file;
   const preview = new Image();
@@ -1110,6 +1151,12 @@ async function analyze(file) {
   fd.append("file", file);
   fd.append("sun_az", $("azRange").value);
   fd.append("sun_el", $("elRange").value);
+  const latV = parseFloat($("latInput") && $("latInput").value);
+  const lonV = parseFloat($("lonInput") && $("lonInput").value);
+  if (Number.isFinite(latV) && Number.isFinite(lonV)) {
+    fd.append("lat", latV);
+    fd.append("lon", lonV);
+  }
   try {
     const r = await fetchT(API + "/analyze_upload", { method: "POST", body: fd }, 180000);
     if (!r.ok) throw new Error(await r.text());

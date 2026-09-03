@@ -30,6 +30,62 @@ PROC = os.path.join(ROOT, "data", "processed")
 
 GRID_N = 192   # must match main.GRID_N
 
+
+# ---------------------------------------------------------------- geography
+def scene_geo(meta):
+    """(center {lat_deg, lon_deg}, extent_m) for a scene, or (None, None).
+    Center comes from source_footprint_center (the crop's own selenographic
+    position); extent from the analysis grid."""
+    meta = meta or {}
+    c = meta.get("source_footprint_center") or {}
+    if not c.get("lat_deg") or not c.get("lon_deg"):
+        return None, None
+    g = meta.get("analysis_grid") or {}
+    extent = float(g.get("cell_meters", 1.0)) * float(g.get("n", 1024))
+    return c, extent
+
+
+def _wrap_lon(lon):
+    return lon % 360.0
+
+
+def geo_pixel_window(corners, H, W, center, extent_m, gsd_m):
+    """Pixel window (r0, c0, r1, c1) in an HxW raster for a scene at
+    `center`, using the product's footprint corners as the georeference
+    (inverse-bilinear solve - polar-swath and lon-wrap safe).  Returns
+    None when the center falls clearly outside the footprint (no
+    geographic coverage - honest no-data, never a wrong-region view)."""
+    import tmc as _tmc
+    uv = _tmc.geo_uv(corners, center)
+    if uv is None or not H or not W:
+        return None
+    fx, fy = uv
+    px = fx * (W - 1)
+    py = fy * (H - 1)
+    half = max(2.0, extent_m / 2.0 / float(gsd_m))
+    r0 = int(max(0, py - half))
+    r1 = int(min(H, py + half))
+    c0 = int(max(0, px - half))
+    c1 = int(min(W, px + half))
+    if r1 - r0 < 2 or c1 - c0 < 2:
+        return None
+    return r0, c0, r1, c1
+
+
+def _dtm_gsd_m(product):
+    """TMC-2 DTM ground sample distance from the product id (d18 = 18 m/px,
+    d32 = 32 m/px); 24 m fallback."""
+    pid = (product.get("product_id") or "")
+    m = re.search(r"_d(\d+)(?:_\D*)?$", pid)
+    return float(m.group(1)) if m else 24.0
+
+
+def _cache_key(center):
+    """Cache suffix bound to the scene's geographic position, so windows
+    for different crops of the same product never collide."""
+    return "%d_%d" % (round(float(center["lat_deg"]) * 1000),
+                      round(float(center["lon_deg"]) * 1000))
+
 # heuristic rule-based mineral classes (legend shared with the frontend)
 MINERAL_LEGEND = [
     {"id": 0, "name": "pyroxene-rich (mafic)", "color": "#d64545",
@@ -95,11 +151,19 @@ def _continuum_removed_depth(refl, lo_um, hi_um):
         float(_wavelength(i0 + k))
 
 
-def iirs_minerals(product, stride=64, force=False):
+def iirs_minerals(product, stride=64, force=False, center=None,
+                  extent_m=None):
     """Classified mineral map for an IIRS product (classes HxW uint8 +
-    meta), cached to data/reference/iirs/<pid>/minerals.npz."""
+    meta), cached to data/reference/iirs/<pid>/minerals*.npz.  When the
+    scene's geographic center is given, ONLY the window of the cube that
+    actually covers the scene (footprint-corner georeferencing, ~80 m/px)
+    is classified - never a wrong-region view; no coverage is an honest
+    error, not somebody else's terrain."""
     pid = product["product_id"]
-    cache_npz = os.path.join(IIRS_CACHE, pid, "minerals.npz")
+    key = _cache_key(center) if center else None
+    cache_npz = os.path.join(IIRS_CACHE, pid,
+                             ("minerals_%s.npz" % key) if key
+                             else "minerals.npz")
     if os.path.exists(cache_npz) and not force:
         d = np.load(cache_npz, allow_pickle=True)
         return d["classes"], dict(d["meta"].item())
@@ -142,8 +206,27 @@ def iirs_minerals(product, stride=64, force=False):
         return None, {"error": "cube geometry unknown for %s" % pid}
     mm = np.memmap(cube, dtype="<f4", mode="r",
                    shape=(bands, lines, samples))
-    rows = list(range(0, lines, stride))
-    cols = list(range(0, samples, max(1, samples // 128)))
+    # geographic window (IIRS nominal ~80 m/px) or legacy whole-cube stride
+    win = None
+    gsd = 80.0
+    if center:
+        win = geo_pixel_window(
+            (product.get("geometry") or {}).get("footprint_corners"),
+            lines, samples, center, extent_m or 1024.0, gsd)
+        if win is None:
+            return None, {"error": "IIRS cube %s does not cover the "
+                                   "scene's coordinates (lat %.2f, lon %.2f)"
+                                   % (pid, float(center["lat_deg"]),
+                                      _wrap_lon(float(center["lon_deg"])))}
+    if win:
+        r0, c0, r1, c1 = win
+        rows = list(range(r0, r1)) if r1 - r0 <= 160 else \
+            list(range(r0, r1, max(1, (r1 - r0) // 128)))
+        cols = list(range(c0, c1)) if c1 - c0 <= 160 else \
+            list(range(c0, c1, max(1, (c1 - c0) // 128)))
+    else:
+        rows = list(range(0, lines, stride))
+        cols = list(range(0, samples, max(1, samples // 128)))
     classes = np.full((len(rows), len(cols)), 5, dtype=np.uint8)
     feats = np.zeros((len(rows), len(cols), 3), dtype=np.float32)
     for r, line in enumerate(rows):
@@ -169,6 +252,12 @@ def iirs_minerals(product, stride=64, force=False):
         "product_id": pid,
         "grid": [int(classes.shape[0]), int(classes.shape[1])],
         "stride_lines": stride,
+        "geographic_window": ({"center": center,
+                               "pixel_window": [int(v) for v in win],
+                               "gsd_m": gsd,
+                               "note": "classified ONLY the cube window "
+                                       "covering the scene's coordinates"}
+                              if (center and win) else None),
         "wavelength_note": "channel centers approximated as 0.8-5.0 um "
                            "near-uniform over 256 channels",
         "method": "continuum-removed band-depth heuristic (1 um, 2 um, "
@@ -181,19 +270,28 @@ def iirs_minerals(product, stride=64, force=False):
     return classes, meta
 
 
-def tmc2_metric_dem(product, force=False):
-    """Metric heights (m) on the 192^2 terrain grid, straight from the
-    TMC-2 stereo-photogrammetry DTM GeoTIFF (true measured heights, not
-    an approximation).  Extracted once; cached as
-    data/reference/tmc/<pid>/metric_dem.npy.  Returns (grid, meta)."""
+def tmc2_metric_dem(product, force=False, center=None, extent_m=None):
+    """Metric heights (m) on the 192^2 terrain grid from the TMC-2 stereo-
+    photogrammetry DTM GeoTIFF (true measured heights, not an approximation).
+    When the scene's geographic center is given, ONLY the DTM window that
+    actually covers the scene (footprint-corner georeferencing, gsd from
+    the product id: d18 = 18 m/px, d32 = 32 m/px) is extracted - the layer
+    renders the scene's own terrain at the scene's own scale, never a
+    wrong-region or wrong-scale view.  Cached per (product, scene center)."""
     pid = product["product_id"]
-    cache_npy = os.path.join(TMC_CACHE, pid, "metric_dem.npy")
+    key = _cache_key(center) if center else None
+    cache_npy = os.path.join(TMC_CACHE, pid,
+                             ("metric_dem_%s.npy" % key) if key
+                             else "metric_dem.npy")
     if os.path.exists(cache_npy) and not force:
         g = np.load(cache_npy)
+        side = cache_npy + ".meta.json"
+        extra = json.load(open(side)) if os.path.exists(side) else {}
         return g, {"product_id": pid,
                    "source": "TMC-2 DTM GeoTIFF (stereo-photogrammetric, "
                              "metric)",
-                   "grid_n": int(g.shape[0])}
+                   "grid_n": int(g.shape[0]),
+                   "geographic_window": extra.get("geographic_window")}
     tif = os.path.join(TMC_CACHE, pid, "dtm.tif")
     if not os.path.exists(tif):
         ok = _extract_tif_for_product(pid, str(product.get("source", "")),
@@ -201,7 +299,60 @@ def tmc2_metric_dem(product, force=False):
         if not ok:
             return None, {"error": "DTM GeoTIFF could not be extracted "
                                    "for %s" % pid}
+    if center:
+        corners = (product.get("geometry") or {}).get("footprint_corners")
+        gsd = _dtm_gsd_m(product)
+        g, m = _metric_window_from_tif(tif, corners, center,
+                                       extent_m or 1024.0, gsd,
+                                       cache_npy, pid)
+        if g is None and "error" not in m:
+            # fall back to the whole-raster read (no corners available)
+            return _metric_from_tif(tif, cache_npy, pid)
+        return g, m
     return _metric_from_tif(tif, cache_npy, pid)
+
+
+def _metric_window_from_tif(tif_path, corners, center, extent_m, gsd_m,
+                            cache_npy, pid):
+    """Geographic window extraction.  Returns (grid, meta); meta carries
+    'no_coverage' when the DTM simply does not cover the scene."""
+    from PIL import Image
+    Image.MAX_IMAGE_PIXELS = None
+    try:
+        im = Image.open(tif_path)
+    except Exception as exc:                             # noqa: BLE001
+        return None, {"error": "GeoTIFF not readable (PIL open failed: %s)"
+                               % str(exc)[:110]}
+    w, h = im.size
+    win = geo_pixel_window(corners, h, w, center, extent_m, gsd_m)
+    if win is None:
+        return None, {"no_coverage": True,
+                      "error": "TMC-2 DTM %s does not cover the scene's "
+                               "coordinates (lat %.2f, lon %.2f)"
+                               % (pid, float(center["lat_deg"]),
+                                  _wrap_lon(float(center["lon_deg"])))}
+    r0, c0, r1, c1 = win
+    try:
+        arr = np.asarray(im.crop((c0, r0, c1, r1)))
+    except Exception as exc:                             # noqa: BLE001
+        return None, {"error": "GeoTIFF window read failed: %s"
+                               % str(exc)[:110]}
+    g, m = _dem_to_grid(arr, cache_npy, pid, arr.shape)
+    if g is not None:
+        m["geographic_window"] = {
+            "center": center,
+            "pixel_window": [int(v) for v in win],
+            "gsd_m": gsd_m,
+            "native_window_m": [(r1 - r0) * gsd_m, (c1 - c0) * gsd_m],
+            "note": "extracted ONLY the DTM window covering the scene's "
+                    "coordinates - true metric relief at scene scale",
+        }
+        try:
+            with open(cache_npy + ".meta.json", "w") as f:
+                json.dump({"geographic_window": m["geographic_window"]}, f)
+        except Exception:                                # noqa: BLE001
+            pass
+    return g, m
 
 
 def _extract_tif_for_product(pid, src, out_path):
@@ -442,18 +593,32 @@ def layers_payload(scene_dir, meta):
                                  pid in q["product_id"])), None)
 
     tmc_prod = _pick(tmc_mod.all_products(), "tmc_reference")
-    if tmc_prod and "dtm" in (tmc_prod.get("product_kind") or "").lower():
-        g, m = tmc2_metric_dem(tmc_prod)
+    center, extent_m = scene_geo(meta)
+    tmc_ref_meta = (meta or {}).get("tmc_reference") or {}
+    if tmc_ref_meta.get("status") not in (None, "", "selected"):
+        # selection already ruled this region out (no_coverage etc.) -
+        # surface that reason instead of attempting unrelated extraction
+        out["metric_dem_tmc2"]["note"] = tmc_ref_meta.get("note") or \
+            "nearest TMC-2 DTM does not cover this scene's coordinates"
+    elif tmc_prod and "dtm" in (tmc_prod.get("product_kind") or "").lower():
+        g, m = tmc2_metric_dem(tmc_prod, center=center, extent_m=extent_m)
         out["metric_dem_tmc2"] = {
             "available": g is not None,
             "product_id": tmc_prod["product_id"],
             "grid": (g.round(2).tolist() if g is not None else None),
-            "note": m.get("source", "") if g is not None
-                    else m.get("error", ""),
+            "center": center,
+            "geographic_window": m.get("geographic_window"),
+            "note": (m.get("source", "") if g is not None
+                     else m.get("error", "")),
         }
     iirs_prod = _pick(iirs_mod.all_products(), "iirs_reference")
-    if iirs_prod:
-        classes, m = iirs_minerals(iirs_prod)
+    iirs_ref_meta = (meta or {}).get("iirs_reference") or {}
+    if iirs_ref_meta.get("status") not in (None, "", "selected"):
+        out["minerals_iirs"]["note"] = iirs_ref_meta.get("note") or \
+            "nearest IIRS cube does not cover this scene's coordinates"
+    elif iirs_prod:
+        classes, m = iirs_minerals(iirs_prod, center=center,
+                                   extent_m=extent_m)
         if classes is not None:
             cg = cv2.resize(classes, (GRID_N, GRID_N),
                             interpolation=cv2.INTER_NEAREST)
@@ -464,11 +629,14 @@ def layers_payload(scene_dir, meta):
                 "legend": MINERAL_LEGEND,
                 "method": m.get("method"),
                 "coverage_note": m.get("coverage_note"),
+                "center": center,
+                "geographic_window": m.get("geographic_window"),
             }
         else:
             out["minerals_iirs"] = {
                 "available": False,
                 "product_id": iirs_prod["product_id"],
+                "center": center,
                 "error": m.get("error", "classification unavailable")}
     if out["metric_dem_tmc2"]["available"] and \
             out["metric_dem_tmc2"].get("grid"):

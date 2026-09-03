@@ -232,6 +232,30 @@ def auto_select_isro_references(img, src_center=None, scene_dir=None):
                        "score": round(float(s), 3)}
                       for p, c, s in cands[:5]]
             best_prod, best_cand, _ = cands[0]
+            # geographic honesty gate: if the scene's coordinates do not
+            # fall INSIDE the nearest product's footprint, say so instead
+            # of showing somebody else's terrain as "the reference"
+            km = best_cand.get("footprint_km")
+            geo = best_prod.get("geometry") or {}
+            corners = geo.get("footprint_corners")
+            covered = None
+            if src_center and corners:
+                covered = mod.geo_point(corners, 1000, 1000, src_center) \
+                    is not None
+            if covered is False or (covered is None and km is not None
+                                    and km > 200.0):
+                out[key] = {
+                    "status": "no_coverage",
+                    "product_id": best_prod["product_id"],
+                    "ranked": ranked,
+                    "note": "no %s product on disk covers this scene's "
+                            "coordinates (nearest %s, %.0f km away) - the "
+                            "reference stays honestly empty instead of "
+                            "showing a wrong region"
+                            % ("TMC/TMC-2" if key == "tmc" else "IIRS",
+                               best_prod["product_id"],
+                               km if km is not None else -1)}
+                continue
             region, meta = mod.build_reference(img_u8, best_prod, best_cand)
             if region is None:
                 out[key] = {"status": "unavailable", "ranked": ranked,

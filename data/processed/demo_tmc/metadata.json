@@ -21,32 +21,8 @@
   "gsd_note": "GSD taken from label/assumption; see metadata",
   "craters_detected": 2,
   "tmc_reference": {
-    "status": "selected",
-    "product_id": "ch2_tmc_ndn_20231106T2259374129_d_dtm_d18",
-    "mission": "Chandrayaan-2",
-    "instrument": "terrain mapping camera",
-    "product_kind": "DTM (derived)",
-    "footprint_km": 0.0,
-    "footprint_center": {
-      "lat_deg": -75.222559,
-      "lon_deg": 207.2435565
-    },
-    "coarse_ncc": 0.384,
-    "translation": {
-      "dx": -27,
-      "dy": -55,
-      "ncc": 0.478
-    },
-    "sift_refined": false,
-    "inliers": 0,
-    "post_alignment_ncc": -0.024,
-    "mutual_information": 0.019,
-    "cross_modal_note": "TMC DTM shaded-relief browse vs panchromatic OHRC radiance - different sensor physics; mutual information reported alongside NCC",
-    "sun": {
-      "sun_azimuth_deg": 296.099205,
-      "sun_elevation_deg": 8.78364
-    },
-    "scale_note": "browse thumbnail resampled onto the OHRC 1024^2 analysis grid (template-aligned)"
+    "status": "unavailable",
+    "note": "Level-1 demo product carries no selenographic georeference in its label - coordinates unknown, so cross-instrument references stay empty rather than showing a wrong region"
   },
   "tmc_reference_ranked": [
     {
@@ -91,29 +67,8 @@
     }
   ],
   "iirs_reference": {
-    "status": "selected",
-    "product_id": "ch2_iir_nci_20221227T0748212038_d_img_d32",
-    "mission": "Chandrayaan-2",
-    "instrument": "imaging infrared spectrometer",
-    "product_kind": "spectral cube (256 bands)",
-    "footprint_km": 233.2,
-    "footprint_center": {
-      "lat_deg": -67.937113,
-      "lon_deg": 215.1975775
-    },
-    "coarse_ncc": 0.109,
-    "translation": {
-      "dx": 256,
-      "dy": -25,
-      "ncc": 0.322
-    },
-    "mutual_information": 0.014,
-    "cross_modal_note": "IIRS spectral projection vs panchromatic OHRC radiance - mutual information is the governing cross-modal statistic (Problem 6)",
-    "sun": {
-      "sun_azimuth_deg": 12.491345,
-      "sun_elevation_deg": 21.685496
-    },
-    "scale_note": "grayscale projection resampled onto the OHRC 1024^2 analysis grid (template-aligned)"
+    "status": "unavailable",
+    "note": "Level-1 demo product carries no selenographic georeference in its label - coordinates unknown, so cross-instrument references stay empty rather than showing a wrong region"
   },
   "iirs_reference_ranked": [
     {

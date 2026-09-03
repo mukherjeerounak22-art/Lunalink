@@ -63,7 +63,7 @@ SCENES = {
         "slug": "ohrc_real",
         "name": "Level 3 - CH-2 OHRC real scene (cross-mission, hard)",
         "subtitle": "real ISRO radiance vs auto-selected NASA LRO NAC - "
-                    "13.47S, 25.19E",
+                    "13.85S, 25.19E",
         "kind": "real",
     },
     "tycho": {
@@ -591,11 +591,14 @@ async def analyze_upload(
     sun_el: float = Form(30.0),
     make_scene: bool = Form(False),
     scene_name: str = Form(""),
+    lat: float = Form(None),
+    lon: float = Form(None),
 ):
     """Upload any lunar/surface image -> shape-from-shading relief -> the
     same terrain payload the 3D hologram consumes (grid + marching-squares
     contours). Non-metric, slope-calibrated relief - same honesty framing
-    as the OHRC scene."""
+    as the OHRC scene.  Optional lat/lon georeferences the upload so the
+    cross-instrument reference selection runs on REAL coordinates."""
     import io
     from PIL import Image as PILImage
     from preprocess import shape_from_shading
@@ -641,7 +644,9 @@ async def analyze_upload(
     if make_scene:
         scene = _make_scene_from_upload(
             np.asarray(img, dtype=np.uint8), file.filename, sun_az, sun_el,
-            scene_name)
+            scene_name, src_center=(
+                {"lat_deg": lat, "lon_deg": lon} if lat is not None
+                and lon is not None else None))
         global _registry
         _registry = ingest.load_registry()
         result["created_scene"] = scene["scene_id"]
@@ -650,7 +655,8 @@ async def analyze_upload(
     return result
 
 
-def _make_scene_from_upload(img_u8, filename, sun_az, sun_el, scene_name):
+def _make_scene_from_upload(img_u8, filename, sun_az, sun_el, scene_name,
+                            src_center=None):
     """Promote an uploaded image to a full matchable scene (SFS DEM +
     craters) registered in the scene registry."""
     import ingest as ing
@@ -662,7 +668,8 @@ def _make_scene_from_upload(img_u8, filename, sun_az, sun_el, scene_name):
         img_u8, sid, cell_m=1.0, sun_az=sun_az, sun_el=sun_el,
         provenance="Full scene created from an uploaded image; relief is a "
                    "photometric approximation (non-metric).",
-        product_id=filename or "uploaded image")
+        product_id=filename or "uploaded image",
+        src_center=src_center)
 
 
 @app.get("/debug/sentry-test")

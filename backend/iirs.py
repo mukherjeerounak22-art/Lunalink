@@ -17,7 +17,8 @@ import zipfile
 import cv2
 import numpy as np
 
-from tmc import parse_isda_geometry, footprint_distance, _valid_bbox
+from tmc import parse_isda_geometry, footprint_distance, _valid_bbox, \
+    geo_point, _wrap_lon
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IIRS_CACHE = os.path.join(ROOT, "data", "reference", "iirs")
@@ -303,6 +304,7 @@ def select_best(src_u8, prods, src_center=None):
     cands = []
     for prod in prods:
         ncc, loc, scale = -1.0, None, None
+        geo = None
         gray = _product_gray(prod)
         if gray is not None:
             th = cv2.resize(gray, (512, 512), interpolation=cv2.INTER_AREA) \
@@ -326,9 +328,15 @@ def select_best(src_u8, prods, src_center=None):
                 sy_ = gray.shape[0] / float(th.shape[0])
                 sx_ = gray.shape[1] / float(th.shape[1])
                 loc = (int(loc[0] * sx_), int(loc[1] * sy_))
+            # geographic seeding (same rule as tmc.select_best)
+            geo = geo_point((prod.get("geometry") or {})
+                            .get("footprint_corners"),
+                            gray.shape[0], gray.shape[1], src_center) \
+                if src_center else None
         km = footprint_distance(prod, src_center)
         geo_score = (1.0 / (1.0 + km / 50.0)) if km is not None else 0.0
         cands.append((prod, {"loc": loc, "scale": scale,
+                             "geo_loc": geo,
                              "thumb_shape": [int(gray.shape[0]),
                                              int(gray.shape[1])]
                              if gray is not None else None,
@@ -350,7 +358,12 @@ def build_reference(src_u8, prod, cand, out=1024):
         return None, {"error": "no readable IIRS raster/browse for %s"
                               % prod["product_id"]}
     loc, scale = cand.get("loc"), cand.get("scale")
+    geo_loc = cand.get("geo_loc")
     th_hw = cand.get("thumb_shape") or list(gray.shape)
+    if geo_loc is not None:
+        # GEOGRAPHIC truth wins (same rule as tmc.build_reference)
+        loc = geo_loc
+        scale = max(scale or 0.12, 0.12)
     if loc is None:
         loc = (gray.shape[1] // 2, gray.shape[0] // 2)
         scale = 0.24
