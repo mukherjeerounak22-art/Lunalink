@@ -183,6 +183,14 @@ def iirs_minerals(product, stride=64, force=False, center=None,
     if zip_path and not os.path.exists(cube):
         cube = _extract_member_once(zip_path, ".qub", cube)
     if not os.path.exists(cube):
+        # last resort: pull the product zip from the public Kaggle
+        # dataset (remote hosting) and stream the cube out of it
+        try:
+            import kfetch
+            kfetch.ensure_cube(product, cube)
+        except Exception as exc:                         # noqa: BLE001
+            print("layers: kfetch cube:", str(exc)[:120])
+    if not os.path.exists(cube):
         return None, {"error": "spectral cube not available for %s" % pid}
     bands = product.get("bands") or 256
     lines = product.get("lines") or 0
@@ -296,6 +304,14 @@ def tmc2_metric_dem(product, force=False, center=None, extent_m=None):
     if not os.path.exists(tif):
         ok = _extract_tif_for_product(pid, str(product.get("source", "")),
                                       tif)
+        if not ok:
+            # last resort: pull the product zip from the public Kaggle
+            # dataset (remote hosting) and stream the DTM out of it
+            try:
+                import kfetch
+                ok = kfetch.ensure_dtm(product, tif)
+            except Exception as exc:                     # noqa: BLE001
+                print("layers: kfetch dtm:", str(exc)[:120])
         if not ok:
             return None, {"error": "DTM GeoTIFF could not be extracted "
                                    "for %s" % pid}

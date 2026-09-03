@@ -25,4 +25,5 @@ services:
       # optional integrations — set these in the Render dashboard, never in git:
       # GOOGLE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
       # UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, SENTRY_DSN_BACKEND,
-      # KAGGLE_LRO_DATASET (owner/slug of the public strip-library dataset)
+      # KAGGLE_LRO_DATASET (owner/slug of the public strip-library dataset)#     KAGGLE_TMC_DATASET (owner/slug containing the TMC-2 DTM product zips)
+#     KAGGLE_IIRS_DATASET (owner/slug containing the IIRS cube product zips)
