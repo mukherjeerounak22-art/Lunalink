@@ -6,8 +6,8 @@ coverage of the Option-B center (-67.89, 210.4) plus the demo box
 (lat -68.39..-67.39, lon 209.9..210.9).  Prints the best scene-anchor pick.
 """
 import os, re, sys, glob, json, zipfile
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), "backend"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "backend"))
 from tmc import parse_isda_geometry, geo_uv, great_circle_km
 
 CENTER = {"lat_deg": -67.89, "lon_deg": 210.4}
