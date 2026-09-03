@@ -1,0 +1,43 @@
+# Optional 24/7 keep-alive for free-tier hosting (Render sleeps after
+# ~15 min idle; this prevents the cold start entirely so visitors never
+# see the "waking backend…" badge — the UI's own wake loop stays as the
+# fallback for when this is off).
+#
+# SETUP (one time): GitHub repo -> Settings -> Secrets and variables ->
+# Actions -> New repository secret:
+#     WAKE_URL = https://<your-backend-host>        (e.g. Render URL)
+# Until the secret exists this workflow runs, notices it is not
+# configured, and exits 0 (never emails you failures).
+name: keep-alive ping
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 min (free tier: 2000 min/mo budget)
+  workflow_dispatch: {}       # manual run button for testing
+
+permissions: {}
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the backend
+        env:
+          WAKE_URL: ${{ secrets.WAKE_URL }}
+        run: |
+          if [ -z "$WAKE_URL" ]; then
+            echo "WAKE_URL secret not set - keep-alive disabled (UI wake loop still covers cold starts)."
+            exit 0
+          fi
+          for i in 1 2 3 4; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 120 "$WAKE_URL/health" || echo 000)
+            echo "attempt $i: /health -> $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "backend did not return 200 in time (it may have just woken up; next cycle will confirm)"
+          exit 0

@@ -71,6 +71,10 @@
   #status.bad { color:var(--white); border-color:var(--grey-500); border-style:dashed;
     background:var(--black); font-weight:600; cursor:pointer;
     text-decoration:underline dotted; }
+/* free-tier cold start: server asleep, we are waking it (auto-retry loop) */
+#status.wait { color:var(--text); border-color:var(--grey-400); border-style:dashed;
+    background:var(--surface); animation:statusPulse 1.6s ease-in-out infinite; }
+@keyframes statusPulse { 50% { opacity:.5; } }
 
   @media (max-width:640px) {
     header { padding:12px 16px 10px; gap:8px 12px; }
@@ -511,8 +515,12 @@ window.__showTab = showTab;
 /* ---- health ---- */
 async function checkHealth() {
   const el = $("status");
-  try {
-    const j = await (await fetchT(API + "/health", { cache: "no-store" }, 12000)).json();
+  /* probe(ms): one /health attempt with a hard timeout; resolves to the
+     payload or throws (fetchT turns stalls into "timed out after …") */
+  const probe = async ms =>
+    (await fetchT(API + "/health", { cache: "no-store" }, ms)).json();
+
+  const okPath = j => {
     el.textContent = "backend online · " + j.pipeline;
     /* hover the badge to see exactly which backend answered — instant
        demo-day debugging (localhost vs Render vs tunnel via ?api=) */
@@ -520,15 +528,44 @@ async function checkHealth() {
       (API ? "" : " (same origin)") +
       " · learned model: " + (j.learned_model_loaded ? "loaded" : "not loaded");
     el.className = "ok";
+  };
+
+  /* 1) fast probe — the normal case (localhost, tunnel, warm cloud) */
+  try {
+    const j = await probe(12000);
+    okPath(j);
     return true;
-  } catch (e) {
-    el.textContent = "backend offline — CLICK TO RETRY · uvicorn main:app --port 8000";
-    el.title = "Tried " + (API || location.origin) +
-      "/health — if you opened this file outside the backend (Live Server, " +
-      "file://, Vercel), set window.API_BASE in frontend/config.js first.";
-    el.className = "bad";
-    return false;
+  } catch (fastErr) { /* fall through to wake mode */ }
+
+  /* 2) wake mode — free hosts (Render et al.) spin the service down
+     after ~15 min idle; the FIRST visitor pays a ~50–60 s cold start.
+     Instead of a dead "offline" badge, poll /health automatically and
+     show live progress so the page self-recovers with zero clicks. */
+  const WAKE_MS = 150000;                 /* 2.5 min total patience      */
+  const t0 = Date.now();
+  el.className = "wait";
+  el.title = "Free hosting spins the backend down when idle; the first " +
+    "visitor pays a ~1-minute cold start. This badge is waking it " +
+    "automatically — no action needed.";
+  while (Date.now() - t0 < WAKE_MS) {
+    const left = Math.ceil((WAKE_MS - (Date.now() - t0)) / 1000);
+    el.textContent = "backend asleep (free-tier cold start) — waking it… ~" +
+      left + " s";
+    await new Promise(r => setTimeout(r, 5000));
+    try {
+      const j = await probe(30000);
+      okPath(j);
+      return true;
+    } catch (e) { /* still spinning up — keep ticking */ }
   }
+
+  /* 3) wake window exhausted — genuine offline */
+  el.textContent = "backend offline — CLICK TO RETRY · uvicorn main:app --port 8000";
+  el.title = "Tried " + (API || location.origin) +
+    "/health — if you opened this file outside the backend (Live Server, " +
+    "file://, Vercel), set window.API_BASE in frontend/config.js first.";
+  el.className = "bad";
+  return false;
 }
 
 /* ---- scenes ---- */
