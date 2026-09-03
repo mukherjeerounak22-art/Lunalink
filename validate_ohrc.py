@@ -10,8 +10,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "backend"))
 from tmc import parse_isda_geometry, geo_uv, great_circle_km
 
-CENTER = {"lat_deg": -67.89, "lon_deg": 210.4}
-BOX = {"lat": (-68.39, -67.39), "lon": (209.9, 210.9)}
+CENTER = {"lat_deg": -89.5, "lon_deg": 210.0}
+BOX = {"lat": (-89.95, -89.2), "lon": (0.0, 360.0)}
 SEARCH = sys.argv[1] if len(sys.argv) > 1 else \
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
