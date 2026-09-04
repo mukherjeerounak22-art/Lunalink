@@ -106,6 +106,24 @@ def _date_of(pid):
     return ts[-8:]
 
 
+def _list_dataset_files(slug):
+    """Full file list of a Kaggle dataset via the authenticated API."""
+    from kaggle.api.kaggle_api_extended import KaggleApi
+    api = KaggleApi()
+    api.authenticate()
+    names, token = [], None
+    for _ in range(40):
+        res = api.dataset_list_files(slug, page_token=token or None,
+                                     page_size=100)
+        for f in (getattr(res, "files", None) or []):
+            n = getattr(f, "name", None) or getattr(f, "path", None)
+            if n:
+                names.append(n)
+        token = getattr(res, "next_page_token", None)
+        if not token:
+            break
+    return names
+
 def _fetch_member(slug, pid, kind, out_path):
     date = _date_of(pid)
     owner, dslug = slug.split("/", 1)
