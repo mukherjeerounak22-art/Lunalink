@@ -109,8 +109,18 @@ def _date_of(pid):
 def _fetch_member(slug, pid, kind, out_path):
     date = _date_of(pid)
     owner, dslug = slug.split("/", 1)
+    member_name = (pid + (".tif" if kind == "dtm" else ".qub")).lower()
     last_err = None
-    for cand in _candidate_paths(pid, date, kind):
+    # resolve the exact in-dataset path via the file listing (any layout)
+    cand_paths = _candidate_paths(pid, date, kind)
+    try:
+        for n in _list_dataset_files(slug):
+            if os.path.basename(n).lower() == member_name:
+                cand_paths.insert(0, n)
+                break
+    except Exception as exc:                             # noqa: BLE001
+        print("kfetch: listing failed (%s)" % str(exc)[:100])
+    for cand in cand_paths:
         tmp = out_path + ".dl"
         try:
             with open(tmp, "rb") as fh:
