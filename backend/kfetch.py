@@ -36,11 +36,53 @@ def _extract_member(zpath, member_suffix, out_path):
     return True
 
 
-def _fetch_product_zip(slug, product_id):
+def _candidate_paths(pid, date, kind):
+    """In-dataset paths seen in the extracted-layout uploads.  `kind` is
+    'dtm' (.tif under data/derived) or 'cube' (.qub under data/calibrated)."""
+    if kind == "dtm":
+        member = pid + ".tif"
+        sub = "derived"
+    else:
+        member = pid + ".qub"
+        sub = "calibrated"
+    return [
+        f"{pid}/data/{sub}/{date}/{member}",
+        f"data/{sub}/{date}/{member}",
+        member,
+    ]
+
+
+def _date_of(pid):
+    ts = pid.split("T")[0] if "T" in pid else pid
+    return ts[-8:]
+
+
+def _fetch_member(slug, pid, kind, out_path):
     import kagglehub
-    print("kfetch: pulling %s from Kaggle dataset %s (one-time per "
-          "instance)" % (product_id, slug))
-    return kagglehub.dataset_download(slug, path=product_id + ".zip")
+    date = _date_of(pid)
+    last_err = None
+    for cand in _candidate_paths(pid, date, kind):
+        try:
+            zpath = kagglehub.dataset_download(slug, path=cand)
+        except Exception as exc:                         # noqa: BLE001
+            last_err = str(exc)[:140]
+            continue
+        return _extract_member(zpath, os.path.basename(cand), out_path)
+    if last_err:
+        # full-dataset fallback (layout unknown) - walk for the member
+        try:
+            dpath = kagglehub.dataset_download(slug)
+            suffix = ".tif" if kind == "dtm" else ".qub"
+            for root, _, files in os.walk(dpath):
+                for fn in files:
+                    if fn.lower() == (pid + suffix).lower():
+                        return _extract_member(os.path.join(root, fn),
+                                               fn, out_path)
+        except Exception as exc:                         # noqa: BLE001
+            last_err = str(exc)[:140]
+    if last_err:
+        print("kfetch: candidates failed (%s)" % last_err)
+    return False
 
 
 def ensure_dtm(product, out_tif):
@@ -51,8 +93,7 @@ def ensure_dtm(product, out_tif):
     if not slug:
         return False
     try:
-        zpath = _fetch_product_zip(slug, pid)
-        return _extract_member(zpath, pid + ".tif", out_tif)
+        return _fetch_member(slug, pid, "dtm", out_tif)
     except Exception as exc:                             # noqa: BLE001
         print("kfetch: DTM fetch failed (%s)" % str(exc)[:140])
         return False
@@ -65,8 +106,8 @@ def ensure_cube(product, out_qub):
     if not slug:
         return False
     try:
-        zpath = _fetch_product_zip(slug, pid)
-        return _extract_member(zpath, pid + ".qub", out_qub)
+        return _fetch_member(slug, pid, "cube", out_qub)
     except Exception as exc:                             # noqa: BLE001
         print("kfetch: cube fetch failed (%s)" % str(exc)[:140])
         return False
+

@@ -45,6 +45,37 @@ def parse_product(xml_path):
     }
 
 
+def parse_pds3_header(img_path):
+    """Fallback product parse from the 5064-byte PDS3 attached header
+    (used when a strip arrives without its detached XML label - e.g.
+    strips fetched from the Kaggle mirror)."""
+    raw = open(img_path, "rb").read(5064).decode("ascii", "replace")
+
+    def f(key, default=None):
+        m = re.search(key + r"\s*=\s*\"?([^\"\s]+)", raw, re.M)
+        return m.group(1) if m else default
+
+    try:
+        lines = int(f(r"\bLINES\b", 0) or 0)
+        samples = int(f(r"\bLINE_SAMPLES\b", 0) or 0)
+    except ValueError:
+        return None
+    if not lines or not samples:
+        return None
+    return {
+        "product_id": os.path.basename(img_path).rsplit(".", 1)[0],
+        "img_path": img_path,
+        "lines": lines,
+        "samples": samples,
+        "offset": 5064,
+        "scaling": 3.05185094759972e-05,
+        "missing": -32768,
+        "start": f("START_TIME"),
+        "stop": f("STOP_TIME"),
+        "label_source": "pds3-header",
+    }
+
+
 def all_products():
     if not os.path.isdir(LRO_DIR):
         return []
@@ -57,6 +88,16 @@ def all_products():
                     out.append(p)
             except Exception:
                 continue
+        elif fn.lower().endswith(".img"):
+            # IMG without a detached label - parse the attached PDS3 header
+            img = os.path.join(LRO_DIR, fn)
+            if not any(x.get("img_path") == img for x in out):
+                try:
+                    p = parse_pds3_header(img)
+                    if p and p["lines"]:
+                        out.append(p)
+                except Exception:
+                    continue
     return out
 
 
