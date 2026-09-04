@@ -433,7 +433,11 @@ def _extract_tif_for_product(pid, src, out_path):
 
 def _dem_to_grid(dem, cache_npy, pid, native_shape):
     """Common post-processing: int meter rasters -> float, nodata-aware
-    area-average downsample to the terrain grid."""
+    resample to the terrain grid.  Downsampling uses area-averaging;
+    upsampling (a polar window smaller than the grid) uses bicubic plus a
+    light smoothing pass so the METRIC layer renders as continuous
+    terrain instead of terraced blocks - interpolation only, no
+    fabricated values beyond the sampled window."""
     if dem.dtype in (np.float32, np.float64, np.float16):
         dem = dem.astype(np.float32)
         dem[~np.isfinite(dem)] = np.nan
@@ -446,10 +450,17 @@ def _dem_to_grid(dem, cache_npy, pid, native_shape):
         return None, {"error": "unsupported raster dtype %s" % dem.dtype}
     valid = np.isfinite(dem).astype(np.float32)
     filled = np.nan_to_num(dem, nan=0.0)
-    v = cv2.resize(filled, (GRID_N, GRID_N), interpolation=cv2.INTER_AREA)
+    upsample = min(dem.shape) < GRID_N
+    interp = cv2.INTER_CUBIC if upsample else cv2.INTER_AREA
+    v = cv2.resize(filled, (GRID_N, GRID_N), interpolation=interp)
     w = cv2.resize(valid, (GRID_N, GRID_N), interpolation=cv2.INTER_AREA)
     g = v / np.maximum(w, 1e-6)          # nodata-aware area average
     g[w < 1e-3] = 0.0
+    if upsample:
+        # light smoothing on the upsampled path only (kills bicubic
+        # ringing / pixel terracing; sub-kilometre scale)
+        g = cv2.GaussianBlur(g, (3, 3), 0)
+        g[w < 1e-3] = 0.0
     g = g - float(g.min())
     os.makedirs(os.path.dirname(cache_npy), exist_ok=True)
     np.save(cache_npy, g.astype(np.float32))
@@ -636,8 +647,17 @@ def layers_payload(scene_dir, meta):
         classes, m = iirs_minerals(iirs_prod, center=center,
                                    extent_m=extent_m)
         if classes is not None:
-            cg = cv2.resize(classes, (GRID_N, GRID_N),
-                            interpolation=cv2.INTER_NEAREST)
+            # smooth-boundary upsample: one-hot linear interpolation then
+            # argmax keeps every class inside the legend (no invented ids)
+            # while removing hard native-resolution blocks
+            onehot = np.zeros((int(classes.max()) + 1,) + classes.shape,
+                              dtype=np.float32)
+            for cid in range(onehot.shape[0]):
+                onehot[cid] = (classes == cid).astype(np.float32)
+            up = np.stack([cv2.resize(onehot[c], (GRID_N, GRID_N),
+                                      interpolation=cv2.INTER_LINEAR)
+                           for c in range(onehot.shape[0])])
+            cg = up.argmax(axis=0).astype(np.uint8)
             out["minerals_iirs"] = {
                 "available": True,
                 "product_id": iirs_prod["product_id"],
