@@ -118,29 +118,39 @@ def ensure_library():
     if not slug:
         return False
     try:
-        import kagglehub
+        import kfetch
+        owner, dslug = slug.split("/", 1)
         print("lroc: strip library empty - pulling %s from Kaggle "
               "(one-time per instance, ~3 GB; honest cold-start cost)"
               % slug)
-        base = kagglehub.dataset_download(slug)
+        ztmp = os.path.join(LRO_DIR, "_dataset.zip")
+        if not kfetch.download_dataset_zip(owner, dslug, ztmp):
+            return False
         os.makedirs(LRO_DIR, exist_ok=True)
         n = 0
-        for root, _, files in os.walk(base):
-            for fn in files:
+        import zipfile
+        with zipfile.ZipFile(ztmp) as z:
+            for info in z.infolist():
+                fn = os.path.basename(info.filename)
                 if not fn.lower().endswith((".img", ".xml")):
                     continue
-                src = os.path.join(root, fn)
                 dst = os.path.join(LRO_DIR, fn)
                 if os.path.exists(dst):
                     n += 1
                     continue
-                try:
-                    os.symlink(src, dst)
-                except OSError:
-                    import shutil
-                    shutil.copy2(src, dst)
+                with z.open(info) as srcf, open(dst + ".part", "wb") as df:
+                    while True:
+                        chunk = srcf.read(8 * 1024 * 1024)
+                        if not chunk:
+                            break
+                        df.write(chunk)
+                os.replace(dst + ".part", dst)
                 n += 1
-        print("lroc: linked %d strip files from the Kaggle cache" % n)
+        try:
+            os.remove(ztmp)
+        except OSError:
+            pass
+        print("lroc: extracted %d strip files from the dataset zip" % n)
         return bool(all_products())
     except Exception as exc:                                 # noqa: BLE001
         print("lroc: Kaggle fetch failed (%s) - uploads will fall back "

@@ -10,7 +10,47 @@ or the .qub spectral cube) is streamed out of it.  Every failure is
 graceful: the caller keeps its honest no-data error.
 """
 import os
-import zipfile
+import requests
+
+def _auth():
+    u = os.environ.get("KAGGLE_USERNAME")
+    k = os.environ.get("KAGGLE_KEY")
+    return (u, k) if u and k else None
+
+def download_dataset_file(owner, slug, file_path, out_path,
+                          chunk=8 * 1024 * 1024):
+    """Stream one file out of a (public) Kaggle dataset via the v1 API.
+    Works for web-UI-created datasets where kagglehub's version
+    resolution 404s.  Returns True on success."""
+    url = (f"https://www.kaggle.com/api/v1/datasets/download/{owner}/"
+           f"{slug}?fileName={requests.utils.quote(file_path)}")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with requests.get(url, auth=_auth(), stream=True,
+                      timeout=(30, 600)) as r:
+        if r.status_code != 200:
+            print("kaggle-fetch: HTTP", r.status_code, file_path)
+            return False
+        tmp = out_path + ".part"
+        with open(tmp, "wb") as f:
+            for c in r.iter_content(chunk):
+                f.write(c)
+    os.replace(tmp, out_path)
+    return True
+
+
+def download_dataset_zip(owner, slug, out_path, chunk=8 * 1024 * 1024):
+    """Download the FULL dataset as one zip via the v1 API."""
+    url = f"https://www.kaggle.com/api/v1/datasets/download/{owner}/{slug}"
+    with requests.get(url, auth=_auth(), stream=True, timeout=(30, 1800)) as r:
+        if r.status_code != 200:
+            print("kaggle-fetch: HTTP", r.status_code, slug)
+            return False
+        tmp = out_path + ".part"
+        with open(tmp, "wb") as f:
+            for c in r.iter_content(chunk):
+                f.write(c)
+    os.replace(tmp, out_path)
+    return True
 
 
 def _slug(name):
@@ -58,28 +98,35 @@ def _date_of(pid):
 
 
 def _fetch_member(slug, pid, kind, out_path):
-    import kagglehub
     date = _date_of(pid)
+    owner, dslug = slug.split("/", 1)
     last_err = None
     for cand in _candidate_paths(pid, date, kind):
+        tmp = out_path + ".dl"
         try:
-            zpath = kagglehub.dataset_download(slug, path=cand)
+            if not download_dataset_file(owner, dslug, cand, tmp):
+                last_err = "HTTP failure"
+                continue
+            if _extract_member(tmp, os.path.basename(cand), out_path):
+                os.remove(tmp)
+                return True
+            last_err = "member not in file"
         except Exception as exc:                         # noqa: BLE001
             last_err = str(exc)[:140]
-            continue
-        return _extract_member(zpath, os.path.basename(cand), out_path)
-    if last_err:
-        # full-dataset fallback (layout unknown) - walk for the member
-        try:
-            dpath = kagglehub.dataset_download(slug)
+    # fallback: full-dataset zip, walk for the member
+    try:
+        ztmp = out_path + ".ds.zip"
+        if download_dataset_zip(owner, dslug, ztmp):
             suffix = ".tif" if kind == "dtm" else ".qub"
-            for root, _, files in os.walk(dpath):
-                for fn in files:
-                    if fn.lower() == (pid + suffix).lower():
-                        return _extract_member(os.path.join(root, fn),
-                                               fn, out_path)
-        except Exception as exc:                         # noqa: BLE001
-            last_err = str(exc)[:140]
+            with zipfile.ZipFile(ztmp) as z:
+                member = next((n for n in z.namelist()
+                               if os.path.basename(n).lower()
+                               == (pid + suffix).lower()), None)
+                if member:
+                    return _extract_member(ztmp, member, out_path)
+            os.remove(ztmp)
+    except Exception as exc:                             # noqa: BLE001
+        last_err = str(exc)[:140]
     if last_err:
         print("kfetch: candidates failed (%s)" % last_err)
     return False
