@@ -67,3 +67,5 @@ backend/models/*.onnx.bak
 #   data/reference/iirs/*/minerals.npz   (classified mineral maps)
 # layers.py is cache-first: these short-circuit before any dtm.tif /
 # cube.qub access, so the multi-GB rasters never need to exist.
+kaggle.json
+backend/kaggle.json

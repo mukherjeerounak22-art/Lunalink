@@ -1,0 +1,1 @@
+{"geographic_window": {"center": {"lat_deg": -84.2209, "lon_deg": 312.27822}, "pixel_window": [5722, 9196, 5779, 9253], "gsd_m": 18.0, "native_window_m": [1026.0, 1026.0], "note": "extracted ONLY the DTM window covering the scene's coordinates - true metric relief at scene scale"}}

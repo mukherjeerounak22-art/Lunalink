@@ -1,23 +1,30 @@
 {
- "demo_tmc": {
-  "dir": "C:\\Users\\user\\Downloads\\SIH\\data\\processed\\demo_tmc",
-  "slug": "demo_tmc",
-  "name": "Level 1 - CH-2 TMC demo product",
-  "subtitle": "warm-up: simulated second-pass reference (same-sensor, easy)",
-  "kind": "user"
- },
- "tmc2_metric_demo": {
-  "dir": "c:\\Users\\user\\Downloads\\SIH\\data\\processed\\tmc2_metric_demo",
-  "slug": "tmc2_metric_demo",
-  "name": "Level 4 - TMC-2 metric DEM (measured stereo heights)",
-  "subtitle": "true photogrammetric heights from TMC-2 stereo - the measuring tape next to SFS",
-  "kind": "user"
- },
- "iirs_mineral_demo": {
-  "dir": "c:\\Users\\user\\Downloads\\SIH\\data\\processed\\iirs_mineral_demo",
-  "slug": "iirs_mineral_demo",
-  "name": "Level 5 - IIRS mineral classification (256-band)",
-  "subtitle": "spectral cube band-depth classes - the chemistry lab",
-  "kind": "user"
- }
+  "demo_tmc": {
+    "dir": "C:\\Users\\user\\Downloads\\SIH\\data\\processed\\demo_tmc",
+    "slug": "demo_tmc",
+    "name": "Level 1 - CH-2 TMC demo product",
+    "subtitle": "warm-up: simulated second-pass reference (same-sensor, easy)",
+    "kind": "user"
+  },
+  "tmc2_metric_demo": {
+    "dir": "c:\\Users\\user\\Downloads\\SIH\\data\\processed\\tmc2_metric_demo",
+    "slug": "tmc2_metric_demo",
+    "name": "Level 4 - TMC-2 metric DEM (measured stereo heights)",
+    "subtitle": "true photogrammetric heights from TMC-2 stereo - the measuring tape next to SFS",
+    "kind": "user"
+  },
+  "iirs_mineral_demo": {
+    "dir": "c:\\Users\\user\\Downloads\\SIH\\data\\processed\\iirs_mineral_demo",
+    "slug": "iirs_mineral_demo",
+    "name": "Level 5 - IIRS mineral classification (256-band)",
+    "subtitle": "spectral cube band-depth classes - the chemistry lab",
+    "kind": "user"
+  },
+  "ohrc_polar_20211222": {
+    "dir": "c:\\Users\\user\\Downloads\\SIH\\data\\processed\\ohrc_polar_20211222",
+    "slug": "ohrc_polar_20211222",
+    "name": "ohrc_polar_20211222",
+    "subtitle": "ch2_ohr_ncp_20211222T2023166276_d_img_d32.img",
+    "kind": "user"
+  }
 }

@@ -15,7 +15,16 @@ import requests
 def _auth():
     u = os.environ.get("KAGGLE_USERNAME")
     k = os.environ.get("KAGGLE_KEY")
-    return (u, k) if u and k else None
+    if u and k:
+        return (u, k)
+    # local fallback: kaggle.json in the repo root (gitignored)
+    cand = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "kaggle.json")
+    try:
+        cfg = json.load(open(cand))
+        return (cfg["username"], cfg["key"])
+    except Exception:                                    # noqa: BLE001
+        return None
 
 def download_dataset_file(owner, slug, file_path, out_path,
                           chunk=8 * 1024 * 1024):
@@ -104,9 +113,11 @@ def _fetch_member(slug, pid, kind, out_path):
     for cand in _candidate_paths(pid, date, kind):
         tmp = out_path + ".dl"
         try:
-            if not download_dataset_file(owner, dslug, cand, tmp):
-                last_err = "HTTP failure"
-                continue
+            with open(tmp, "rb") as fh:
+                magic = fh.read(2)
+            if magic != b"PK":
+                os.replace(tmp, out_path)      # per-file download IS the member
+                return True
             if _extract_member(tmp, os.path.basename(cand), out_path):
                 os.remove(tmp)
                 return True
