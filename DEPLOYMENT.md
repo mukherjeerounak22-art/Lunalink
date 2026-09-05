@@ -166,7 +166,24 @@ and `frontend/config.js` uses `window.API_BASE = ""` = same origin). So the
 simplest shareable deployment is **one web service, one URL** — no Vercel
 step, no CORS juggling, no second deploy:
 
-**Recommended path: Render web service (the included `render.yaml`)**
+**Recommended path: Render web service (the included `render.yaml`) — THIS IS LIVE**
+
+> ✅ **Deployed:** https://sih26166-backend.onrender.com (free tier,
+> Python 3.11, 512 MB). Environment variables set in the Render dashboard:
+> `GOOGLE_API_KEY`, `SENTRY_DSN_BACKEND`, `UPSTASH_REDIS_REST_URL`/`_TOKEN`,
+> `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KAGGLE_USERNAME`/`KAGGLE_KEY`,
+> and the dataset pointers `KAGGLE_LRO_DATASET`,
+> `KAGGLE_TMC_DATASET`, `KAGGLE_IIRS_DATASET` — the latter two accept
+> **comma-separated lists** of public Kaggle datasets; the on-demand fetcher
+> (`backend/kfetch.py`) searches every listed dataset per product file, so
+> the raw rasters can live scattered across the account's datasets. All six
+> baked scenes, the ONNX model and the layer caches ship in git, so a fresh
+> deploy serves the full experience immediately; only brand-new uploads
+> trigger Kaggle fetches. The match pipeline is RAM-capped for the free
+> tier's 512 MB (measured peak 275 MB). A GitHub Actions keep-alive
+> (`.github/workflows/keep-alive.yml`, secret `WAKE_URL`) pings `/health`
+> every 10 minutes so the free tier doesn't sleep mid-demo; the UI also
+> auto-wakes a cold instance with a pulsing status badge.
 
 1. Push the repo to GitHub (`origin` is already configured).
 2. render.com → **New + → Blueprint** → pick the repo → **Apply**.

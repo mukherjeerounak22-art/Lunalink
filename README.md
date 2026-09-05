@@ -35,12 +35,24 @@ integration is optional and degrades to a no-op without keys. Total cost: $0.
     `explainer.md.pdf` companion): ask anything in the 04 NARRATION tab.
     The browser can read both aloud (Web Speech API, offline).
 
-Three **leveled demo scenes** ship out of the box: Level 1 — CH-2 TMC demo
+Six **leveled demo scenes** ship out of the box: Level 1 — CH-2 TMC demo
 product (easy, ~59% match vs a simulated second pass), Level 2 — Tycho
 synthetic stand-in (medium, ~32%), Level 3 — CH-2 OHRC real scene (hard,
-~2.5%, cross-mission vs the auto-selected NASA LRO NAC strip). Selecting a
-scene re-runs the match and rebuilds the 3-D terrain for it; the terrain
-readout carries the scene's match quality.
+~2.5%, cross-mission vs the auto-selected NASA LRO NAC strip), Level 4 —
+TMC-2 metric DEM (METRIC layer + SFS−metric validation), Level 5 — IIRS
+mineral classification (MINERALS layer + legend), and Level 6 — OHRC polar
+4-instrument fusion: OHRC source + REAL RANSAC-verified NASA NAC reference
++ TMC-2 metric heights + IIRS minerals over one region (all five layers
+live). Selecting a scene re-runs the match and rebuilds the 3-D terrain for
+it; the terrain readout carries the scene's match quality.
+
+**Live deployment:** https://sih26166-backend.onrender.com — Render free
+web service (Blueprint below). One link serves the UI, the API, the ONNX
+descriptor and every scene cache. The raw rasters live in public Kaggle
+datasets and are fetched per-file on demand (`KAGGLE_TMC_DATASET` /
+`KAGGLE_IIRS_DATASET` accept comma-separated dataset lists — the fetcher
+searches all of them); the match pipeline is RAM-capped for the free
+tier's 512 MB (peak 275 MB, measured).
 
 ## Architecture
 

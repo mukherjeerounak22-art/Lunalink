@@ -1206,6 +1206,24 @@ $("viewIn3dBtn").addEventListener("click", () => {
   if (!lastPayload) return;
   window.__buildTerrain(lastPayload);
   window.__showTab("terrain");
+  /* the layer switcher must bind to the SCENE this payload belongs to:
+     - a promoted upload carries created_scene,
+     - a synced-from-match upload IS the matched scene's own source image,
+     - a plain un-scened upload has no instrument layers yet (honest note) */
+  const sid = lastPayload.created_scene ||
+    (lastPayload.scene_id &&
+     !String(lastPayload.scene_id).startsWith("upload:")
+      ? lastPayload.scene_id : null) ||
+    (window.__currentScene && window.__currentScene()) || null;
+  if (sid && sid !== "upload:" + (lastFile ? lastFile.name : "")) {
+    loadLayers(sid);
+  } else {
+    [...$id('layerBar').querySelectorAll('button')].forEach(b => {
+      if (b.dataset.layer !== 'sfs') b.disabled = true; });
+    $id('layerNote').textContent =
+      'instrument layers need a matchable scene — press ' +
+      '⚡ CREATE MATCHABLE SCENE first, then return here';
+  }
 });
 
 /* SYNC SCENE → UPLOAD: pull the currently matched scene's source image

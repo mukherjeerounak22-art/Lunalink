@@ -32,4 +32,36 @@ the NASA LRO NAC reference. Older sections below that call TMC-2/IIRS a
   (gate > 0.5), export verified by onnxruntime.
 - Scene ladder: Level 1 CH-2 TMC demo product, Level 2 Tycho synthetic,
   Level 3 CH-2 OHRC real scene, Level 4 TMC-2 metric DEM scene
-  (tmc2_metric_demo), Level 5 IIRS mineral scene (iirs_mineral_demo).
+  (tmc2_metric_demo), Level 5 IIRS mineral scene (iirs_mineral_demo),
+  Level 6 OHRC polar scene (ohrc_polar_20211222, -84.22 deg, 312.28 degE) -
+  the FIRST scene with all four instruments stacked: OHRC source + REAL
+  RANSAC-verified NASA NAC reference (M1263400700LC) + TMC-2 METRIC layer
+  + IIRS MINERALS layer + SFS-METRIC validation (5/5 layers).
+
+DEPLOYMENT UPDATE — the project runs LIVE on free cloud hosting
+================================================================
+- Live URL: https://sih26166-backend.onrender.com (Render free web service,
+  Blueprint from render.yaml, Python 3.11, 512 MB RAM). The SAME service
+  serves the frontend, the API, the ONNX descriptor and the scene caches -
+  one link, nothing else to explain.
+- The 29 GB of raw rasters live in PUBLIC Kaggle datasets owned by
+  rounakmukherjee22 (lro-nac-polar, ch2-iirs-tmc2-data,
+  final-kaggle-dataset, ch2-tmc2-derived-part-1..4, ch2-tmc2-collection,
+  ch2-tmc2-dtm-collection, ch2-ohrc-iirs-collection,
+  ch2-tmc2-iirs-combined-dataset, ohrc-polar-*). KAGGLE_TMC_DATASET /
+  KAGGLE_IIRS_DATASET accept COMMA-SEPARATED dataset lists and the fetcher
+  (backend/kfetch.py) searches every listed dataset per product file, so
+  scattered files are found regardless of which dataset holds them.
+- RAM diet for the 512 MB free tier (peak measured 1244 MB -> 275 MB):
+  ONNX runtime arena disabled + single-thread session, learned keypoints
+  capped at 400, patch embedding streamed in 128-patch batches, and
+  multi-GB TMC-2 DTM windows are read with tifffile memmap / per-strip
+  byte-range reads (never a full 1.5-gigapixel decode).
+- Portability: registry scene dirs are remapped to the running checkout at
+  load time, so the stale-scene cleanup can never wipe scenes on a host
+  whose paths differ from the machine that baked them.
+- Honest-labeling rule preserved online: Level 6's exact DTM window is a
+  measured polar no-data gap, so its METRIC layer uses the NEAREST fully
+  valid DTM window (~2.9 km) and says so on the layer note; scenes without
+  instrument coverage report verified no-coverage instead of showing
+  another region's data.

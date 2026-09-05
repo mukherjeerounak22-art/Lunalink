@@ -1,8 +1,12 @@
 """On-demand fetch of the big TMC-2/IIRS rasters from public Kaggle
 datasets - the remote-hosting counterpart of the local zips.
 
-    KAGGLE_TMC_DATASET = <owner>/<slug>   dataset contains <pid>.zip files
-    KAGGLE_IIRS_DATASET = <owner>/<slug>  (e.g. ch2_iir_nci_..._d_img_d32.zip)
+    KAGGLE_TMC_DATASET = <owner>/<slug>[, <owner>/<slug> ...]
+    KAGGLE_IIRS_DATASET = <owner>/<slug>[, <owner>/<slug> ...]
+
+Each env var may list SEVERAL public datasets (comma-separated); the
+fetcher searches them all per product file, so rasters can live scattered
+across the account's datasets in any folder layout.
 
 Public datasets need no Kaggle credentials.  The wanted product zip is
 pulled per-file via kagglehub, and only the wanted member (the .tif DTM

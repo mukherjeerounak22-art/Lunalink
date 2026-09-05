@@ -70,7 +70,9 @@ exception), so a fresh clone is demo-ready:
    Level 3 CH-2 OHRC real scene (~2.5% vs the auto-selected NASA strip,
    the honest cross-mission number) → **Level 4 TMC-2 metric DEM** (the
    METRIC + SFS−METRIC validation layers) → **Level 5 IIRS minerals**
-   (the MINERALS layer with legend).
+   (the MINERALS layer with legend) → **Level 6 OHRC polar 4-instrument
+   fusion** (all five layers: OHRC + real NASA NAC + TMC-2 metric +
+   IIRS minerals — the complete problem-statement stack on one region).
 
 ## Pre-demo sanity check
 
