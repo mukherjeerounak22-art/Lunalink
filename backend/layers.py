@@ -351,14 +351,14 @@ def _read_tif_window(tif_path, r0, r1, c0, c1):
         try:
             with tifffile.TiffFile(tif_path) as tif:
                 pg = tif.pages[0]
+                h, w = int(pg.shape[0]), int(pg.shape[1])
+                dt = np.dtype(pg.dtype)
+                itemsize = dt.itemsize
+                rowbytes = w * itemsize
+                r0c, r1c = max(0, int(r0)), min(int(r1), h)
+                c0c, c1c = max(0, int(c0)), min(int(c1), w)
                 if getattr(pg, "is_contiguous", False):
-                    h, w = int(pg.shape[0]), int(pg.shape[1])
-                    dt = pg.dtype
                     ob = int(pg.dataoffsets[0])
-                    itemsize = np.dtype(dt).itemsize
-                    rowbytes = w * itemsize
-                    r0c, r1c = max(0, int(r0)), min(int(r1), h)
-                    c0c, c1c = max(0, int(c0)), min(int(c1), w)
                     with open(tif_path, "rb") as f:
                         f.seek(ob + r0c * rowbytes)
                         raw = f.read((r1c - r0c) * rowbytes)
@@ -366,6 +366,26 @@ def _read_tif_window(tif_path, r0, r1, c0, c1):
                                         count=(r1c - r0c) * w)
                     arr = arr.reshape(r1c - r0c, w)[:, c0c:c1c].copy()
                     return arr, str(dt)
+                # stripped layout: read ONLY the strips intersecting the
+                # window (each strip is a few hundred KB - RAM-safe)
+                rps = int(getattr(pg, "rowsperstrip", 0) or 1)
+                rps = max(1, min(rps, h))
+                offs = np.atleast_1d(pg.dataoffsets)
+                cnts = np.atleast_1d(pg.databytecounts)
+                s0 = r0c // rps
+                s1 = (r1c - 1) // rps
+                chunks = []
+                with open(tif_path, "rb") as f:
+                    for s in range(s0, s1 + 1):
+                        rows_in = min(rps, h - s * rps)
+                        f.seek(int(offs[s]))
+                        raw = f.read(int(cnts[s]))
+                        strip = np.frombuffer(raw, dtype=dt)
+                        strip = strip[:rows_in * w].reshape(rows_in, w)
+                        chunks.append(strip)
+                arr = np.concatenate(chunks, axis=0)[
+                    r0c - s0 * rps: r1c - s0 * rps, c0c:c1c].copy()
+                return arr, str(dt)
         except Exception:                                # noqa: BLE001
             pass
     # PIL fallback: only sane for modest rasters; guard the decode size
