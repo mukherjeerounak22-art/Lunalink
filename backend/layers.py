@@ -436,6 +436,51 @@ def _metric_window_from_tif(tif_path, corners, center, extent_m, gsd_m,
     arr, dt = _read_tif_window(tif_path, r0, r1, c0, c1)
     if arr is None:
         return None, {"error": "GeoTIFF window read failed: %s" % dt}
+
+    def _valid_frac(a):
+        a = a.astype(np.float32)
+        return float(((a > -5000) & (a < 12000)).mean())
+
+    offset_note = None
+    if _valid_frac(arr) < 0.5:
+        # polar nodata gap at the exact scene window - search outward for
+        # the NEAREST fully-valid window of the same size and use it,
+        # honestly labeled with its offset (never silently wrong-region)
+        arr = None
+        best = None
+        hgt, wid = r1 - r0, c1 - c0
+        H_, W_ = im_h, im_w
+        steps = [round(0.5 * i * 1000.0 / gsd_m) for i in range(1, 13)]
+        cands = []
+        for dr in steps:
+            for dc in steps:
+                cands += [(dr, dc), (-dr, dc), (dr, -dc), (-dr, -dc)]
+        cands.sort(key=lambda t: (t[0] ** 2 + t[1] ** 2))
+        for dr, dc in cands:
+            nr0, nr1 = r0 + dr, r1 + dr
+            nc0, nc1 = c0 + dc, c1 + dc
+            if nr0 < 0 or nc0 < 0 or nr1 > H_ or nc1 > W_:
+                continue
+            cand, _dt = _read_tif_window(tif_path, nr0, nr1, nc0, nc1)
+            if cand is None:
+                continue
+            if _valid_frac(cand) >= 0.9:
+                arr, best = cand, (dr, dc)
+                break
+        if arr is None:
+            return None, {"no_valid_data": True,
+                          "error": "TMC-2 DTM window has no valid elevation "
+                                   "data at or near the scene's coordinates "
+                                   "(measured polar coverage gap)"}
+        dr_km = abs(best[0]) * gsd_m / 1000.0
+        dc_km = abs(best[1]) * gsd_m / 1000.0
+        off_km = (dr_km ** 2 + dc_km ** 2) ** 0.5
+        r0, c0, r1, c1 = r0 + best[0], c0 + best[1], r1 + best[0], c1 + best[1]
+        offset_note = ("scene window is a measured polar no-data gap in the "
+                       "DTM - using the NEAREST fully-valid DTM window, "
+                       "%.1f km from the scene center (labeled, not silent)"
+                       % off_km)
+
     g, m = _dem_to_grid(arr, cache_npy, pid, arr.shape)
     if g is not None:
         m["geographic_window"] = {
@@ -443,9 +488,12 @@ def _metric_window_from_tif(tif_path, corners, center, extent_m, gsd_m,
             "pixel_window": [int(v) for v in win],
             "gsd_m": gsd_m,
             "native_window_m": [(r1 - r0) * gsd_m, (c1 - c0) * gsd_m],
-            "note": "extracted ONLY the DTM window covering the scene's "
-                    "coordinates - true metric relief at scene scale",
+            "note": ("extracted ONLY the DTM window covering the scene's "
+                     "coordinates - true metric relief at scene scale"
+                     if not offset_note else offset_note),
         }
+        if offset_note:
+            m["nearest_valid_offset"] = True
         try:
             with open(cache_npy + ".meta.json", "w") as f:
                 json.dump({"geographic_window": m["geographic_window"]}, f)
