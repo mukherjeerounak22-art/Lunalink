@@ -462,6 +462,13 @@ def _dem_to_grid(dem, cache_npy, pid, native_shape):
         g = cv2.GaussianBlur(g, (3, 3), 0)
         g[w < 1e-3] = 0.0
     g = g - float(g.min())
+    # honest guard: a window with no valid data (or zero relief) must not
+    # render as a fake metric surface
+    if not np.isfinite(g).all() or float(g.std()) < 1e-6 or \
+            (valid.sum() if valid.ndim else 0) == 0:
+        return None, {"error": "TMC-2 DTM window contains no valid data "
+                               "at these coordinates (polar coverage gap)",
+                      "no_valid_data": True}
     os.makedirs(os.path.dirname(cache_npy), exist_ok=True)
     np.save(cache_npy, g.astype(np.float32))
     return g.astype(np.float32), {"product_id": pid,
