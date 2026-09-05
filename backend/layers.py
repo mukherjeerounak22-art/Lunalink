@@ -328,19 +328,83 @@ def tmc2_metric_dem(product, force=False, center=None, extent_m=None):
     return _metric_from_tif(tif, cache_npy, pid)
 
 
+def _read_tif_window(tif_path, r0, r1, c0, c1):
+    """Low-memory window read of a (potentially multi-GB) GeoTIFF.
+
+    Strategy: tifffile memmap (zero-copy virtual memory) -> tifffile
+    offset read (uncontiguous files: read only the window's row bytes) ->
+    PIL last resort (loads the full page - only acceptable for small
+    rasters).  Never decodes a whole gigapixel page into RAM.
+    Returns (window_array_2d, dtype_str) or (None, error_str)."""
+    try:
+        import tifffile
+    except ImportError:
+        tifffile = None
+    if tifffile is not None:
+        try:
+            mm = tifffile.memmap(tif_path, mode="r")
+            win = np.asarray(mm[r0:r1, c0:c1])
+            del mm
+            return win, str(win.dtype)
+        except Exception:                                # noqa: BLE001
+            pass
+        try:
+            with tifffile.TiffFile(tif_path) as tif:
+                pg = tif.pages[0]
+                if getattr(pg, "is_contiguous", False):
+                    h, w = int(pg.shape[0]), int(pg.shape[1])
+                    dt = pg.dtype
+                    ob = int(pg.dataoffsets[0])
+                    itemsize = np.dtype(dt).itemsize
+                    rowbytes = w * itemsize
+                    r0c, r1c = max(0, int(r0)), min(int(r1), h)
+                    c0c, c1c = max(0, int(c0)), min(int(c1), w)
+                    with open(tif_path, "rb") as f:
+                        f.seek(ob + r0c * rowbytes)
+                        raw = f.read((r1c - r0c) * rowbytes)
+                    arr = np.frombuffer(raw, dtype=dt,
+                                        count=(r1c - r0c) * w)
+                    arr = arr.reshape(r1c - r0c, w)[:, c0c:c1c].copy()
+                    return arr, str(dt)
+        except Exception:                                # noqa: BLE001
+            pass
+    # PIL fallback: only sane for modest rasters; guard the decode size
+    from PIL import Image
+    Image.MAX_IMAGE_PIXELS = None
+    im = Image.open(tif_path)
+    w, h = im.size
+    if w * h > 400_000_000:                              # >400 MP: refuse
+        im.close()
+        return None, ("raster too large for the PIL fallback (%d MP) - "
+                      "install tifffile for low-memory window reads"
+                      % (w * h // 1_000_000))
+    arr = np.asarray(im.crop((c0, r0, c1, r1)))
+    im.close()
+    return arr, str(arr.dtype)
+
+
 def _metric_window_from_tif(tif_path, corners, center, extent_m, gsd_m,
                             cache_npy, pid):
     """Geographic window extraction.  Returns (grid, meta); meta carries
     'no_coverage' when the DTM simply does not cover the scene."""
-    from PIL import Image
-    Image.MAX_IMAGE_PIXELS = None
     try:
-        im = Image.open(tif_path)
+        with open(tif_path, "rb") as _f:
+            pass                                          # existence probe
     except Exception as exc:                             # noqa: BLE001
-        return None, {"error": "GeoTIFF not readable (PIL open failed: %s)"
-                               % str(exc)[:110]}
-    w, h = im.size
-    win = geo_pixel_window(corners, h, w, center, extent_m, gsd_m)
+        return None, {"error": "GeoTIFF not readable (%s)" % str(exc)[:110]}
+    im_h = im_w = None
+    try:
+        import tifffile
+        with tifffile.TiffFile(tif_path) as tif:
+            pg = tif.pages[0]
+            im_h, im_w = int(pg.shape[0]), int(pg.shape[1])
+    except Exception:                                    # noqa: BLE001
+        from PIL import Image
+        Image.MAX_IMAGE_PIXELS = None
+        im = Image.open(tif_path)
+        im_w, im_h = im.size
+        im.close()
+    win = geo_pixel_window(corners, im_h, im_w, center, extent_m, gsd_m)
     if win is None:
         return None, {"no_coverage": True,
                       "error": "TMC-2 DTM %s does not cover the scene's "
@@ -348,11 +412,9 @@ def _metric_window_from_tif(tif_path, corners, center, extent_m, gsd_m,
                                % (pid, float(center["lat_deg"]),
                                   _wrap_lon(float(center["lon_deg"])))}
     r0, c0, r1, c1 = win
-    try:
-        arr = np.asarray(im.crop((c0, r0, c1, r1)))
-    except Exception as exc:                             # noqa: BLE001
-        return None, {"error": "GeoTIFF window read failed: %s"
-                               % str(exc)[:110]}
+    arr, dt = _read_tif_window(tif_path, r0, r1, c0, c1)
+    if arr is None:
+        return None, {"error": "GeoTIFF window read failed: %s" % dt}
     g, m = _dem_to_grid(arr, cache_npy, pid, arr.shape)
     if g is not None:
         m["geographic_window"] = {

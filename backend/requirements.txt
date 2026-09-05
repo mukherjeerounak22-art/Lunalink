@@ -8,5 +8,6 @@ python-multipart
 httpx
 sentry-sdk        # enabled when SENTRY_DSN_BACKEND is set
 onnxruntime       # optional - enables the learned descriptor branch
+tifffile          # low-memory window reads of multi-GB DTM GeoTIFFs
 kagglehub         # optional - on-demand LRO strip fetch from a public Kaggle dataset
 psycopg2-binary   # optional - only for migrate.py
