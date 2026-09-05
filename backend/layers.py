@@ -340,14 +340,15 @@ def _read_tif_window(tif_path, r0, r1, c0, c1):
         import tifffile
     except ImportError:
         tifffile = None
+    last_err = None
     if tifffile is not None:
         try:
             mm = tifffile.memmap(tif_path, mode="r")
             win = np.asarray(mm[r0:r1, c0:c1])
             del mm
             return win, str(win.dtype)
-        except Exception:                                # noqa: BLE001
-            pass
+        except Exception as exc:                         # noqa: BLE001
+            last_err = "memmap: %s" % str(exc)[:140]
         try:
             with tifffile.TiffFile(tif_path) as tif:
                 pg = tif.pages[0]
@@ -386,8 +387,8 @@ def _read_tif_window(tif_path, r0, r1, c0, c1):
                 arr = np.concatenate(chunks, axis=0)[
                     r0c - s0 * rps: r1c - s0 * rps, c0c:c1c].copy()
                 return arr, str(dt)
-        except Exception:                                # noqa: BLE001
-            pass
+        except Exception as exc:                         # noqa: BLE001
+            last_err = ("strip-read: %s" % str(exc)[:140]) or last_err
     # PIL fallback: only sane for modest rasters; guard the decode size
     from PIL import Image
     Image.MAX_IMAGE_PIXELS = None
@@ -396,8 +397,8 @@ def _read_tif_window(tif_path, r0, r1, c0, c1):
     if w * h > 400_000_000:                              # >400 MP: refuse
         im.close()
         return None, ("raster too large for the PIL fallback (%d MP) - "
-                      "install tifffile for low-memory window reads"
-                      % (w * h // 1_000_000))
+                      "low-memory readers failed [%s]"
+                      % (w * h // 1_000_000, last_err or "no tifffile"))
     arr = np.asarray(im.crop((c0, r0, c1, r1)))
     im.close()
     return arr, str(arr.dtype)
