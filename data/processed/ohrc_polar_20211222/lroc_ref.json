@@ -1,0 +1,21 @@
+{
+ "product_id": "M1263400700LC",
+ "inliers": 0,
+ "sift_refined": false,
+ "translation": {
+  "dx": -272,
+  "dy": -246,
+  "ncc": 0.396
+ },
+ "nac_gsd_est": 1.25,
+ "region_full_px": [
+  0,
+  46691,
+  1149,
+  48981
+ ],
+ "start": "2017-10-23T12:23:53.773",
+ "stop": "2017-10-23T12:24:48.191",
+ "scale_note": "NAC CDR (~0.5 m/px) resampled onto the OHRC 1024^2 analysis grid (~1.06 m/px) (template-aligned)",
+ "selection": "AUTO-SELECTED as the nearest overlapping product among 6 LROC NAC strips (post-alignment NCC 0.40)"
+}

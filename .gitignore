@@ -69,4 +69,5 @@ backend/models/*.onnx.bak
 # cube.qub access, so the multi-GB rasters never need to exist.
 kaggle.json
 backend/kaggle.json
-!data/processed/ohrc_polar_20211222/`n!data/processed/ohrc_polar_20211222/**
+!data/processed/ohrc_polar_20211222/
+!data/processed/ohrc_polar_20211222/**
