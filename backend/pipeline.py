@@ -27,10 +27,16 @@ MODEL_PATH = os.path.join(ROOT, "backend", "models", "descriptor.onnx")
 _session = None
 _embed_failed_once = False   # warn only once when the learned branch degrades
 if ort is not None and os.path.isfile(MODEL_PATH):
-    _session = ort.InferenceSession(MODEL_PATH, providers=["CPUExecutionProvider"])
+    _so = ort.SessionOptions()
+    _so.intra_op_num_threads = 1      # 512 MB hosts: no thread-pool buffers
+    _so.inter_op_num_threads = 1
+    _so.enable_cpu_mem_arena = False  # the arena is the GB-class hog
+    _so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    _session = ort.InferenceSession(MODEL_PATH, sess_options=_so,
+                                    providers=["CPUExecutionProvider"])
 
 PATCH = 128          # must match the training-time patch size
-EMBED_MAX_KP = 1500  # top-response keypoints embedded per image
+EMBED_MAX_KP = 400   # top-response keypoints embedded per image (RAM-capped)
 
 
 def learned_model_loaded():
@@ -49,14 +55,17 @@ def _embed(image, keypoints):
         return np.zeros((0, 128), dtype=np.float32)
     half = PATCH // 2
     padded = np.pad(img, half, mode="edge")
-    patches = np.empty((len(keypoints), 1, PATCH, PATCH), dtype=np.float32)
-    for i, kp in enumerate(keypoints):
-        x, y = int(round(kp.pt[0])), int(round(kp.pt[1]))
-        patches[i, 0] = padded[y:y + PATCH, x:x + PATCH]
     outs = []
+    B = 128  # stream in batches - never materialize all patches at once
     try:
-        for b in range(0, len(patches), 256):
-            outs.append(_session.run(None, {"patch": patches[b:b + 256]})[0])
+        for b in range(0, len(keypoints), B):
+            chunk = keypoints[b:b + B]
+            batch = np.empty((len(chunk), 1, PATCH, PATCH), dtype=np.float32)
+            for i, kp in enumerate(chunk):
+                x, y = int(round(kp.pt[0])), int(round(kp.pt[1]))
+                batch[i, 0] = padded[y:y + PATCH, x:x + PATCH]
+            outs.append(_session.run(None, {"patch": batch})[0])
+            del batch
     except Exception as exc:                                   # noqa: BLE001
         if not _embed_failed_once:
             _embed_failed_once = True
