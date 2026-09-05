@@ -26,10 +26,25 @@ REGISTRY = os.path.join(PROC, "registry.json")
 
 
 def load_registry():
-    if os.path.exists(REGISTRY):
+    if not os.path.exists(REGISTRY):
+        return {}
+    try:
         with open(REGISTRY) as f:
-            return json.load(f)
-    return {}
+            reg = json.load(f)
+    except Exception:                                        # noqa: BLE001
+        return {}
+    # Portability: entries registered on another machine carry absolute
+    # dirs that do not exist on THIS host (e.g. a Render Linux checkout
+    # given a Windows path).  Remap to this checkout's PROC/<basename> so
+    # the stale-purge in main.py can never wipe valid scenes.
+    for sid, e in reg.items():
+        d = (e or {}).get("dir", "")
+        if d and not os.path.isdir(d):
+            cand = os.path.join(PROC, os.path.basename(
+                d.replace("\\", "/").rstrip("/")))
+            if os.path.isdir(cand):
+                e["dir"] = cand
+    return reg
 
 
 def register_scene(scene_id, entry):
