@@ -46,14 +46,18 @@ _sentry_enabled = False
 
 def init_sentry():
     global _sentry_enabled
-    if not SENTRY_DSN_BACKEND:
+    dsn = (SENTRY_DSN_BACKEND or "").strip()
+    # a placeholder, empty, or malformed DSN must never kill the app -
+    # Sentry is optional telemetry, so validate before initializing
+    if not dsn.lower().startswith(("http://", "https://")):
         return False
     try:
         import sentry_sdk
-        sentry_sdk.init(dsn=SENTRY_DSN_BACKEND, traces_sample_rate=0.1)
+        sentry_sdk.init(dsn=dsn, traces_sample_rate=0.1)
         _sentry_enabled = True
         return True
-    except ImportError:
+    except Exception as exc:                             # noqa: BLE001
+        print("integrations: sentry disabled (%s)" % str(exc)[:120])
         return False
 
 
