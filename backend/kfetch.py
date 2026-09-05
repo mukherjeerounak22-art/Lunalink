@@ -66,6 +66,19 @@ def _slug(name):
     return (os.environ.get(name) or "").strip()
 
 
+def _slugs(name):
+    """Env var may list ONE dataset ('owner/slug') or SEVERAL separated by
+    commas/spaces - the files are scattered across the user's datasets, so
+    every candidate is searched until the wanted product is found."""
+    raw = _slug(name)
+    out = []
+    for part in raw.replace(",", " ").split():
+        part = part.strip().strip("/")
+        if "/" in part and part not in out:
+            out.append(part)
+    return out
+
+
 def _extract_member(zpath, member_suffix, out_path):
     with zipfile.ZipFile(zpath) as z:
         member = next((n for n in z.namelist()
@@ -173,27 +186,29 @@ def _fetch_member(slug, pid, kind, out_path):
 
 def ensure_dtm(product, out_tif):
     """dtm.tif for a TMC-2 DTM product, fetched on demand.  True on
-    success; False (and the caller's honest error) on any failure."""
+    success; False (and the caller's honest error) on any failure.
+    Every dataset listed in KAGGLE_TMC_DATASET is searched in turn."""
     pid = product.get("product_id") or ""
-    slug = _slug("KAGGLE_TMC_DATASET")
-    if not slug:
-        return False
-    try:
-        return _fetch_member(slug, pid, "dtm", out_tif)
-    except Exception as exc:                             # noqa: BLE001
-        print("kfetch: DTM fetch failed (%s)" % str(exc)[:140])
-        return False
+    for slug in _slugs("KAGGLE_TMC_DATASET"):
+        try:
+            if _fetch_member(slug, pid, "dtm", out_tif):
+                return True
+        except Exception as exc:                         # noqa: BLE001
+            print("kfetch: DTM fetch failed on %s (%s)"
+                  % (slug, str(exc)[:140]))
+    return False
 
 
 def ensure_cube(product, out_qub):
-    """cube.qub for an IIRS product, fetched on demand.  True/False."""
+    """cube.qub for an IIRS product, fetched on demand.  True/False.
+    Every dataset listed in KAGGLE_IIRS_DATASET is searched in turn."""
     pid = product.get("product_id") or ""
-    slug = _slug("KAGGLE_IIRS_DATASET")
-    if not slug:
-        return False
-    try:
-        return _fetch_member(slug, pid, "cube", out_qub)
-    except Exception as exc:                             # noqa: BLE001
-        print("kfetch: cube fetch failed (%s)" % str(exc)[:140])
-        return False
+    for slug in _slugs("KAGGLE_IIRS_DATASET"):
+        try:
+            if _fetch_member(slug, pid, "cube", out_qub):
+                return True
+        except Exception as exc:                         # noqa: BLE001
+            print("kfetch: cube fetch failed on %s (%s)"
+                  % (slug, str(exc)[:140]))
+    return False
 
