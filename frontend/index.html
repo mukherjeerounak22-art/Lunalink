@@ -636,7 +636,7 @@ function renderSceneMeta() {
   if (!s || !s.metadata) { kvEl.innerHTML = ""; return; }
   const m = s.metadata, sun = m.sun || {};
   $("sceneTags").innerHTML =
-    `<span class="tag ${s.kind}">${s.kind === "real" ? "REAL ISRO DATA" : "SYNTHETIC STAND-IN"}</span>` +
+    `<span class="tag ${s.id === "tycho" ? "synthetic" : "real"}">${s.id === "tycho" ? "SYNTHETIC STAND-IN (labeled)" : "REAL ISRO DATA"}</span>` +
     `<span class="tag">${m.instrument || ""}</span>`;
   kvEl.innerHTML = kvHtml([
     ["product", m.product_id],
