@@ -227,66 +227,71 @@ want a separate pretty domain for the UI.)
   and put the big data in a Spaces dataset or an attached persistent
   storage). Same single-URL story on all of them.
 
-## 8. Azure App Service — hybrid Kaggle (data) + Azure (compute)
+## 8. Azure Container Apps — hybrid Kaggle (data) + Azure (compute), 7am–7pm scheduled
 
 Architecture: **Kaggle stays the data plane** (~56 GB of NAC strips, TMC-2
 DTMs and IIRS cubes across the account's public datasets — fetched per-file
-on demand by `backend/kfetch.py`), **Azure runs only compute** (the one
-container: FastAPI + frontend + ONNX). The rasters never enter git, the
-image, or Azure storage. Full runbook:
+on demand by `backend/kfetch.py`), **Azure runs only compute** (one
+container: FastAPI + frontend + ONNX). The rasters never enter git or Azure
+storage. Unlike App Service (which bills 24/7 for the plan), Container Apps
+bills per replica-second and can scale to **zero** — this deployment runs
+`min-replicas 1` from **07:00–19:00 IST** and `min-replicas 0` (≈ $0)
+overnight, driven by `.github/workflows/azure-schedule.yml` (crons 01:30 /
+13:30 UTC). The image ships from Docker Hub (free) via
+`.github/workflows/docker-build.yml` — no ACR cost.
+
+**One-time Cloud Shell setup** (shell.azure.com, Bash; skip any step whose
+resources already exist from the earlier App Service attempt — or wipe with
+`az group delete -n sih26166-rg -y`):
 
 ```bash
-# Cloud Shell (shell.azure.com, Bash) — zero local installs
 RG=sih26166-rg; LOC=centralindia
 az group create -n $RG -l $LOC
-az acr create -n sih26166acr -g $RG --sku Basic --admin-enabled true
+az containerapp env create -n sih26166-env -g $RG -l $LOC
 
-# build the image straight from GitHub (no local Docker needed)
-az acr build --registry sih26166acr --image sih26166:v1 \
-  https://github.com/mukherjeerounak22-art/Lunalink.git#main \
-  --dockerfile deploy/Dockerfile
+# scheduler identity (for the GitHub cron) — save appId/password/tenant
+az ad sp create-for-rbac --name sih26166-scheduler --role Contributor \
+  --scopes /subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RG
+az account show --query id -o tsv
 
-# plan + app (B1 = 1.75 GB RAM, supports Always On; custom containers
-# require at least Basic — the free F1 tier cannot run Docker)
-az appservice plan create -n sih26166-plan -g $RG -l $LOC --sku B1 --is-linux
-az webapp create -n sih26166-backend -g $RG --plan sih26166-plan \
-  --deployment-container-image-name sih26166acr.azurecr.io/sih26166:v1
+# app (public Docker Hub image pushed by the build workflow; 1 GiB covers
+# the measured 275 MB match peak). Fill the env list from the dashboard
+# values used on Render, then:
+az containerapp create -n sih26166-backend -g $RG \
+  --environment sih26166-env \
+  --image <DOCKERHUB_USER>/sih26166:latest \
+  --ingress external --target-port 7860 \
+  --min-replicas 0 --max-replicas 2 --cpu 0.5 --memory 1.0Gi \
+  --env-vars \
+  "GOOGLE_API_KEY=<...>" "GEMINI_MODEL=gemini-flash-lite-latest" \
+  "SENTRY_DSN_BACKEND=<...>" \
+  "UPSTASH_REDIS_REST_URL=<...>" "UPSTASH_REDIS_REST_TOKEN=<...>" \
+  "SUPABASE_URL=<...>" "SUPABASE_SERVICE_ROLE_KEY=<...>" \
+  "KAGGLE_USERNAME=rounakmukherjee22" "KAGGLE_KEY=<...>" \
+  "KAGGLE_LRO_DATASET=rounakmukherjee22/lro-nac-polar" \
+  "KAGGLE_TMC_DATASET=<comma-separated TMC dataset list>" \
+  "KAGGLE_IIRS_DATASET=<comma-separated IIRS dataset list>"
 
-# registry pull creds + the container's listen port + health check + Always On
-PWD_ACR=$(az acr credential show -n sih26166acr --query "passwords[0].value" -o tsv)
-az webapp config appsettings set -g $RG -n sih26166-backend --settings \
-  DOCKER_REGISTRY_SERVER_URL=https://sih26166acr.azurecr.io \
-  DOCKER_REGISTRY_SERVER_USERNAME=sih26166acr \
-  DOCKER_REGISTRY_SERVER_PASSWORD=$PWD_ACR \
-  WEBSITES_PORT=7860
-az webapp config set -g $RG -n sih26166-backend \
-  --generic-configurations '{"healthCheckPath": "/health"}'
-az resource update -g $RG -n sih26166-backend \
-  --resource-type "Microsoft.Web/sites" --set properties.siteConfig.alwaysOn=true
-
-# the app's own env vars — same values as Render's dashboard
-az webapp config appsettings set -g $RG -n sih26166-backend --settings \
-  GOOGLE_API_KEY=<...> SENTRY_DSN_BACKEND=<...> \
-  UPSTASH_REDIS_REST_URL=<...> UPSTASH_REDIS_REST_TOKEN=<...> \
-  SUPABASE_URL=<...> SUPABASE_SERVICE_ROLE_KEY=<...> \
-  KAGGLE_USERNAME=rounakmukherjee22 KAGGLE_KEY=<...> \
-  KAGGLE_LRO_DATASET=rounakmukherjee22/lro-nac-polar \
-  KAGGLE_TMC_DATASET="<comma-separated TMC dataset list>" \
-  KAGGLE_IIRS_DATASET="<comma-separated IIRS dataset list>"
-
-az webapp restart -g $RG -n sih26166-backend
-curl https://sih26166-backend.azurewebsites.net/health
+az containerapp show -n sih26166-backend -g $RG \
+  --query properties.configuration.ingress.fqdn -o tsv
 ```
 
-Live URL: `https://sih26166-backend.azurewebsites.net` (free managed HTTPS;
-custom domains + certs are also free on B1). Redeploys: App Service →
-**Deployment Center → GitHub** (one-time OAuth; set the Dockerfile path to
-`deploy/Dockerfile`) gives auto-redeploy on every push — or bump the tag
-(`az acr build … --image sih26166:v2` + `az webapp config container set
---image …:v2` + restart). Costs from the subscription's $200 credit:
-App Service B1 ≈ $13/mo + ACR Basic ≈ $5/mo ≈ **$18/mo → ~10-11 months of
-24/7 always-on hosting**; Kaggle-side costs nothing. Cleanup when done:
-`az group delete -n sih26166-rg`. Render remains the free fallback URL.
+Live URL: `https://sih26166-backend.<env-hash>.centralindia.azurecontainerapps.io`
+(free managed HTTPS). **GitHub secrets required** (repo → Settings →
+Secrets → Actions): `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` (hub.docker.com
+→ Settings → Security → New Access Token), and `AZURE_CREDS` = one JSON
+`{"clientId": "<appId>", "clientSecret": "<password>", "subscriptionId":
+"<sub id>", "tenantId": "<tenant>"}`. Then Actions → **build-push-dockerhub
+→ Run workflow** once to publish the image, and the azure-schedule cron
+drives 7am–7pm thereafter (manual override: run it with state on/off).
+Overnight any visitor wakes the app in 1–3 min (all caches ship in the
+image; the UI's wake badge covers the wait). Cost at 12 h/day,
+0.5 vCPU/1 GiB ≈ **$14/mo after the free consumption grants** (vCPU
+180 k-s + memory 360 k-GiB-s per month) → **~7 months from the $100
+student credit**; Docker Hub $0; Kaggle $0. Keep the Render keep-alive
+(`WAKE_URL`) pointed at **Render** so the free fallback stays warm; do not
+point it at the Container App or the pinger defeats the night schedule.
+Cleanup: `az group delete -n sih26166-rg -y`.
 
 
 
