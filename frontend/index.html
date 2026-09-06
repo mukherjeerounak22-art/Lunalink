@@ -520,7 +520,16 @@ function showTab(name) {
     $("tab-" + t).setAttribute("aria-selected", on);
     $("view-" + t).classList.toggle("active", on);
   });
-  if (name === "terrain") window.dispatchEvent(new Event("resize"));
+  if (name === "terrain") {
+    window.dispatchEvent(new Event("resize"));
+    /* stale-mesh guard: the terrain tab always reflects the scene the MATCH
+       dropdown points at — if the mesh was built for another scene (or an
+       upload preview), rebuild for the current scene immediately */
+    const cur = window.__currentScene ? window.__currentScene() : null;
+    if (cur && window.__terrainSceneId !== cur && window.__loadTerrain) {
+      window.__loadTerrain(cur);
+    }
+  }
 }
 TABS.forEach(t => $("tab-" + t).addEventListener("click", () => showTab(t)));
 window.__showTab = showTab;
@@ -1134,6 +1143,7 @@ window.__setCoords = (la, lo) => {
 
 async function analyze(file) {
   lastFile = file;
+  window.__syncedSceneId = null;   /* a genuine drop invalidates the sync link */
   const preview = new Image();
   preview.onload = () => {
     const ctx = $("upCanvas").getContext("2d");
@@ -1204,20 +1214,26 @@ function renderHillshade(payload) {
 
 $("viewIn3dBtn").addEventListener("click", () => {
   if (!lastPayload) return;
-  window.__buildTerrain(lastPayload);
-  window.__showTab("terrain");
-  /* the layer switcher must bind to the SCENE this payload belongs to:
+  /* which SCENE does this payload belong to?
      - a promoted upload carries created_scene,
      - a synced-from-match upload IS the matched scene's own source image,
-     - a plain un-scened upload has no instrument layers yet (honest note) */
+     - a server-assigned non-upload scene_id counts too,
+     - a plain un-scened upload has none (honest local preview only) */
   const sid = lastPayload.created_scene ||
+    window.__syncedSceneId ||
     (lastPayload.scene_id &&
      !String(lastPayload.scene_id).startsWith("upload:")
-      ? lastPayload.scene_id : null) ||
-    (window.__currentScene && window.__currentScene()) || null;
-  if (sid && sid !== "upload:" + (lastFile ? lastFile.name : "")) {
+      ? lastPayload.scene_id : null) || null;
+  window.__showTab("terrain");
+  if (sid) {
+    /* scene-backed: fetch the scene's AUTHORITATIVE terrain (real product
+       sun geometry + contours) instead of re-meshing the upload analysis
+       with slider sun angles - that mismatch read as a "random scene" */
+    window.__loadTerrain(sid);
     loadLayers(sid);
   } else {
+    /* raw upload preview: honest mesh from THIS image + slider sun */
+    window.__buildTerrain(lastPayload);
     [...$id('layerBar').querySelectorAll('button')].forEach(b => {
       if (b.dataset.layer !== 'sfs') b.disabled = true; });
     $id('layerNote').textContent =
@@ -1240,6 +1256,9 @@ window.__syncFromMatch = async function () {
     const blob = await r.blob();
     const name = (window.__currentSceneName || "scene").replace(/[^\w.-]+/g, "_") + ".png";
     await analyze(new File([blob], name, { type: "image/png" }));
+    /* remember WHICH scene this image came from - SEND TO TERRAIN must
+       load that scene's authoritative terrain, not a re-analysis */
+    window.__syncedSceneId = window.__currentScene ? window.__currentScene() : null;
     window.__showTab("upload");
   } catch (e) {
     note.textContent = "Sync failed: " + e.message;
@@ -1374,6 +1393,12 @@ function buildTerrain(payload) {
   const zOff = -G.zmin_m;
   Object.assign(layerState, { n, H, vScale, zOff, horiz,
     payload, layers: null, current: 'sfs' });
+  /* stamp WHICH scene this mesh belongs to - the terrain tab's stale-mesh
+     guard compares this against the MATCH dropdown on every tab switch */
+  window.__terrainSceneId = payload.created_scene ||
+    (payload.scene_id && !String(payload.scene_id).startsWith("upload:")
+      ? payload.scene_id : null) || null;
+  window.__terrainSource = window.__terrainSceneId ? "scene" : "upload";
 
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, n - 1, n - 1);
   geo.rotateX(-Math.PI / 2);
