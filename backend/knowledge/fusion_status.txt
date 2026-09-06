@@ -65,3 +65,10 @@ DEPLOYMENT UPDATE — the project runs LIVE on free cloud hosting
   valid DTM window (~2.9 km) and says so on the layer note; scenes without
   instrument coverage report verified no-coverage instead of showing
   another region's data.
+- Azure option (hybrid Kaggle + Azure): an Azure App Service (Linux, B1,
+  Always On, 1.75 GB RAM) can host the same single container
+  (deploy/Dockerfile, WEBSITES_PORT=7860, health path /health) with the
+  identical env-var set; Kaggle remains the data plane (per-file multi-
+  dataset fetch on new uploads), Azure only runs compute. Live URL
+  https://sih26166-backend.azurewebsites.net; Render (free) stays the
+  fallback link. Runbook: DEPLOYMENT.md section 8.

@@ -227,5 +227,66 @@ want a separate pretty domain for the UI.)
   and put the big data in a Spaces dataset or an attached persistent
   storage). Same single-URL story on all of them.
 
+## 8. Azure App Service — hybrid Kaggle (data) + Azure (compute)
+
+Architecture: **Kaggle stays the data plane** (~56 GB of NAC strips, TMC-2
+DTMs and IIRS cubes across the account's public datasets — fetched per-file
+on demand by `backend/kfetch.py`), **Azure runs only compute** (the one
+container: FastAPI + frontend + ONNX). The rasters never enter git, the
+image, or Azure storage. Full runbook:
+
+```bash
+# Cloud Shell (shell.azure.com, Bash) — zero local installs
+RG=sih26166-rg; LOC=centralindia
+az group create -n $RG -l $LOC
+az acr create -n sih26166acr -g $RG --sku Basic --admin-enabled true
+
+# build the image straight from GitHub (no local Docker needed)
+az acr build --registry sih26166acr --image sih26166:v1 \
+  https://github.com/mukherjeerounak22-art/Lunalink.git#main \
+  --dockerfile deploy/Dockerfile
+
+# plan + app (B1 = 1.75 GB RAM, supports Always On; custom containers
+# require at least Basic — the free F1 tier cannot run Docker)
+az appservice plan create -n sih26166-plan -g $RG -l $LOC --sku B1 --is-linux
+az webapp create -n sih26166-backend -g $RG --plan sih26166-plan \
+  --deployment-container-image-name sih26166acr.azurecr.io/sih26166:v1
+
+# registry pull creds + the container's listen port + health check + Always On
+PWD_ACR=$(az acr credential show -n sih26166acr --query "passwords[0].value" -o tsv)
+az webapp config appsettings set -g $RG -n sih26166-backend --settings \
+  DOCKER_REGISTRY_SERVER_URL=https://sih26166acr.azurecr.io \
+  DOCKER_REGISTRY_SERVER_USERNAME=sih26166acr \
+  DOCKER_REGISTRY_SERVER_PASSWORD=$PWD_ACR \
+  WEBSITES_PORT=7860
+az webapp config set -g $RG -n sih26166-backend \
+  --generic-configurations '{"healthCheckPath": "/health"}'
+az resource update -g $RG -n sih26166-backend \
+  --resource-type "Microsoft.Web/sites" --set properties.siteConfig.alwaysOn=true
+
+# the app's own env vars — same values as Render's dashboard
+az webapp config appsettings set -g $RG -n sih26166-backend --settings \
+  GOOGLE_API_KEY=<...> SENTRY_DSN_BACKEND=<...> \
+  UPSTASH_REDIS_REST_URL=<...> UPSTASH_REDIS_REST_TOKEN=<...> \
+  SUPABASE_URL=<...> SUPABASE_SERVICE_ROLE_KEY=<...> \
+  KAGGLE_USERNAME=rounakmukherjee22 KAGGLE_KEY=<...> \
+  KAGGLE_LRO_DATASET=rounakmukherjee22/lro-nac-polar \
+  KAGGLE_TMC_DATASET="<comma-separated TMC dataset list>" \
+  KAGGLE_IIRS_DATASET="<comma-separated IIRS dataset list>"
+
+az webapp restart -g $RG -n sih26166-backend
+curl https://sih26166-backend.azurewebsites.net/health
+```
+
+Live URL: `https://sih26166-backend.azurewebsites.net` (free managed HTTPS;
+custom domains + certs are also free on B1). Redeploys: App Service →
+**Deployment Center → GitHub** (one-time OAuth; set the Dockerfile path to
+`deploy/Dockerfile`) gives auto-redeploy on every push — or bump the tag
+(`az acr build … --image sih26166:v2` + `az webapp config container set
+--image …:v2` + restart). Costs from the subscription's $200 credit:
+App Service B1 ≈ $13/mo + ACR Basic ≈ $5/mo ≈ **$18/mo → ~10-11 months of
+24/7 always-on hosting**; Kaggle-side costs nothing. Cleanup when done:
+`az group delete -n sih26166-rg`. Render remains the free fallback URL.
+
 
 
