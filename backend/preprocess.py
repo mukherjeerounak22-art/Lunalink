@@ -123,7 +123,11 @@ def sun_vector_image_frame(az_deg, el_deg):
 
 def shape_from_shading(image, sun_az_deg, sun_el_deg, cell_m=1.0,
                        target_slope_deg=8.0, max_slope_deg=35.0):
-    img = gaussian_filter(image.astype(np.float64), 3.0)
+    # Prefilter scale adapts to resolution: noise suppression should track
+    # pixel scale, not blanket fine texture (crater rims) on high-res crops.
+    _im = np.asarray(image)
+    sigma = float(np.clip(min(_im.shape[:2]) / 384.0, 1.2, 3.0))
+    img = gaussian_filter(image.astype(np.float64), sigma)
     sx, sy, sz = sun_vector_image_frame(sun_az_deg, sun_el_deg)
     sh2 = sx * sx + sy * sy
     a_flat = np.median(img) / max(sz, 1e-6)          # albedo*irradiance scale
@@ -135,6 +139,17 @@ def shape_from_shading(image, sun_az_deg, sun_el_deg, cell_m=1.0,
     t = np.clip(t, -max_t, max_t)
     t[shadow] = 0.0
     p, q = -sx * t, -sy * t
+    # Shadows carry no slope information. Forcing their slopes to zero
+    # integrated into flat plateaus across large low-sun shadow fields
+    # (polar scenes). Fill them by normalized-convolution diffusion from
+    # the lit surroundings instead - plausible interpolated relief,
+    # reported in the layer note, never claimed as measured.
+    if shadow.any() and not shadow.all():
+        keep = (~shadow).astype(np.float64)
+        wgt = gaussian_filter(keep, 8.0)
+        for arr in (p, q):
+            fill = gaussian_filter(arr * keep, 8.0) / np.maximum(wgt, 1e-6)
+            arr[shadow] = fill[shadow]
     # FFT Poisson solve: lap h = dp/dx + dq/dy on a windowed domain.
     # Must be a full 2-D FFT (rfft is 1-D along the last axis and would
     # divide a 1-D spectrum by a 2-D Laplacian - caught by verify_robust).

@@ -785,7 +785,10 @@ def layers_payload(scene_dir, meta):
     out = {
         "height_sfs": {"available": True,
                        "note": "linearized-Lambertian shape-from-shading "
-                               "(photometric approximation, non-metric)"},
+                               "(photometric approximation, non-metric); "
+                               "resolution-adaptive prefilter + shadow-region "
+                               "slope diffusion; relief scaled to a stated 8 deg "
+                               "RMS slope (radiometric calibration, reported)"},
         "optical_texture": {"available": os.path.exists(
                                 os.path.join(scene_dir, "source.png")),
                             "url": "/static/%s/source.png" % rel,
