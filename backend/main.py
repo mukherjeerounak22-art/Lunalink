@@ -112,7 +112,17 @@ def _load_pair(d):
 def health():
     import pipeline
     loaded = pipeline.learned_model_loaded()
+    commit = None
+    try:    # build identity baked by the Docker workflow - proves which
+            # commit a deployment actually runs (stale-deploy guard)
+        bi = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "build_info.json")
+        if os.path.exists(bi):
+            commit = (json.load(open(bi)) or {}).get("commit")
+    except Exception:                                        # noqa: BLE001
+        pass
     return {"status": "ok", "learned_model_loaded": loaded,
+            "commit": commit,
             "pipeline": ("SIFT + learned ONNX descriptor" if loaded
                          else "SIFT fallback (descriptor.onnx not trained yet)")}
 

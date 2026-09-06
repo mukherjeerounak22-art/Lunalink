@@ -13,6 +13,13 @@ jobs:
     steps:
       - name: checkout
         run: git clone --depth 1 "${{ github.server_url }}/${{ github.repository }}" repo
+      - name: bake build identity
+        run: |
+          cd repo
+          printf '{"commit": "%s", "built_utc": "%s"}\n' \
+            "${{ github.sha }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > backend/build_info.json
+          cat backend/build_info.json
       - name: docker login
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
       - name: build & push
