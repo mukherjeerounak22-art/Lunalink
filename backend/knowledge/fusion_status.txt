@@ -75,3 +75,13 @@ DEPLOYMENT UPDATE — the project runs LIVE on free cloud hosting
   image. ~$14/mo at 12h/day after the free consumption grants (~7 months
   from the student credit); Render (free) stays the fallback link.
   Runbook: DEPLOYMENT.md section 8.
+
+TERRAIN LAYER KNOWLEDGE (for narration):
+- HEIGHT-SFS: linearized-Lambertian shape-from-shading from the mission sun angles; a photometric approximation (non-metric), stated on screen.
+- OPTICAL: the raw radiance image draped on the SFS mesh.
+- METRIC-TMC-2: MEASURED stereo-photogrammetric heights from the Chandrayaan-2 TMC-2 DTM, co-registered to the scene coordinates; fetched per-file from the project Kaggle datasets.
+- MINERALS-IIRS: 256-band IIRS cube -> continuum-removed 1um/2um/3um band depths -> pyroxene/olivine/feldspathic/mixed/OH-H2O classes with legend.
+- SFS-METRIC: per-vertex difference between SFS and the metric DEM with Pearson r and MAE - the measured validation of the reconstruction.
+- Scene ladder: L1 TMC demo baseline; L2 Tycho synthetic stand-in (labeled); L3 OHRC equatorial cross-mission vs NASA; L4 TMC-2 metric + validation; L5 IIRS minerals; L6 OHRC polar 4-instrument fusion (OHRC + real NASA NAC M1263400700LC + TMC-2 metric + IIRS minerals).
+- Level 6 METRIC uses the nearest fully-valid DTM window ~2.9 km from the scene center (measured polar no-data gap; labeled). A clamped height plateau at the DTM no-data boundary (zero-variance raster-max artifact) is detected and inpainted from surrounding valid terrain - reported in the layer note.
+- Crater lat/lon: local tangent-plane approximation from the label footprint center (north-up, lunar radius 1737.4 km, lon scale x cos|lat|).

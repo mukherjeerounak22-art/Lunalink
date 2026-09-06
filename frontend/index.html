@@ -395,6 +395,7 @@ if (window.SENTRY_DSN_FRONTEND) {
         <button data-layer="minerals" class="ghost" disabled>MINERALS · IIRS</button>
         <button data-layer="diff" class="ghost" disabled>SFS − METRIC</button>
       </div>
+      <div class="mono-line" id="sceneBrief" style="display:none; margin-top:8px; color:#9fb8d8"></div>
       <div class="mono-line" id="layerNote" style="margin-top:6px"></div>
       <div id="mineralLegend" style="display:none; gap:14px; flex-wrap:wrap; margin-top:8px"></div>
       <div class="note" id="holoMeta"></div>
@@ -1476,6 +1477,9 @@ async function loadLayers(sceneId) {
     return;
   }
   const L = layerState.layers;
+  const brief = $id('sceneBrief');
+  if (L.scene_brief) { brief.textContent = L.scene_brief; brief.style.display = 'block'; }
+  else brief.style.display = 'none';
   const avail = {
     sfs: true,
     tex: !!(L.optical_texture && L.optical_texture.available),

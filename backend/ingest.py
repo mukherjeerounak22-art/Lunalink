@@ -10,6 +10,7 @@ Scenes are registered in data/processed/registry.json and immediately
 appear in /craters, /match, /terrain.
 """
 import json
+import math
 import os
 import re
 import time
@@ -371,6 +372,38 @@ def auto_select_isro_references(img, src_center=None, scene_dir=None):
     return out
 
 
+def fill_crater_geo(craters, meta):
+    """Map crater pixel positions to selenographic lat/lon via a local
+    tangent-plane approximation anchored at the label footprint center
+    (north-up image assumption; lunar radius 1737.4 km; lon scale
+    contracted by cos(|lat|) - essential in the polar cases).  A labeled
+    approximation, not a per-pixel geometry-file solve; when no footprint
+    center exists the coordinates stay null and say so."""
+    c = (meta or {}).get("source_footprint_center") or {}
+    clat, clon = c.get("lat_deg"), c.get("lon_deg")
+    if clat is None or clon is None:
+        for cr in craters:
+            cr["geo_note"] = "footprint center unavailable - pixel coords only"
+        return craters
+    ag = (meta or {}).get("analysis_grid") or {}
+    cell = float(ag.get("cell_meters", 1.0))
+    n = float(ag.get("n", 1024))
+    m_per_deg_lat = 1737400.0 * math.pi / 180.0
+    m_per_deg_lon = m_per_deg_lat * math.cos(math.radians(abs(clat)))
+    cx = cy = n / 2.0
+    for cr in craters:
+        cr["lat_deg"] = round(
+            clat + (cy - float(cr.get("y_px", 0))) * cell / m_per_deg_lat, 5)
+        cr["lon_deg"] = round(
+            (clon + (float(cr.get("x_px", 0)) - cx) * cell / m_per_deg_lon)
+            % 360.0, 5)
+    meta["crater_geo_method"] = (
+        "local tangent-plane from the label footprint center (north-up "
+        "assumption, lunar radius 1737.4 km, lon scale x cos|lat|) - "
+        "approximation, not a per-pixel geometry-file solve")
+    return craters
+
+
 def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
                  provenance="", product_id=None, geo=None, gsd_note=None,
                  auto_ref=True, src_center=None):
@@ -463,7 +496,8 @@ def ingest_image(img_u8, scene_id, cell_m=1.0, sun_az=270.8, sun_el=10.0,
             meta["multi_instrument_summary"] = (
                 "ISRO cross-instrument selection skipped: %s" % exc)
 
-    craters = detect_craters(img, cell_m, sun, (0, 0), meta)
+    craters = fill_crater_geo(
+        detect_craters(img, cell_m, sun, (0, 0), meta), meta)
     meta["craters_detected"] = len(craters)
     with open(os.path.join(scene_dir, "craters.json"), "w") as f:
         json.dump(craters, f, indent=2)

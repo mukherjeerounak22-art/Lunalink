@@ -88,3 +88,12 @@ checks. Test scenes are auto-removable from `data/processed/registry.json`.
 
 See `PRESENTATION_GUIDE.md` for the full architecture walkthrough,
 the ONNX training story, and the mathematical formulation.
+
+
+## Terrain layers quick guide
+- HEIGHT - SFS: photometric shape-from-shading relief (approximation, stated).
+- OPTICAL: raw image draped on the mesh.
+- METRIC - TMC-2: MEASURED stereo heights from the TMC-2 DTM (per-file Kaggle fetch).
+- MINERALS - IIRS: 256-band band-depth classification with legend.
+- SFS - METRIC: measured validation error map (r + MAE) of SFS vs the metric DEM.
+The blue line above the buttons states what the selected scene demonstrates.

@@ -30,6 +30,32 @@ PROC = os.path.join(ROOT, "data", "processed")
 
 GRID_N = 192   # must match main.GRID_N
 
+# One-line per-scene orientation shown above the layer switcher in
+# 02 TERRAIN 3D - what the scene demonstrates and which layers are real.
+SCENE_BRIEFS = {
+    "demo_tmc":
+        "LEVEL 1 - CH-2 TMC demo product: baseline pipeline on a real "
+        "mission scene. Layers: SFS relief + optical drape.",
+    "tycho_synthetic":
+        "LEVEL 2 - Tycho synthetic stand-in (labeled SYNTHETIC): controlled "
+        "matcher validation - same-sensor conditions, strong match expected.",
+    "ohrc_real":
+        "LEVEL 3 - CH-2 OHRC equatorial scene: the hard cross-mission case - "
+        "real OHRC radiance vs real NASA NAC imagery (a low match % is the "
+        "honest result at different sun angles).",
+    "tmc2_metric_demo":
+        "LEVEL 4 - TMC-2 metric DEM scene: SFS relief VALIDATED against "
+        "measured stereo heights - the SFS-vs-METRIC error map is live.",
+    "iirs_mineral_demo":
+        "LEVEL 5 - IIRS mineral scene: 256-band spectral classification "
+        "(pyroxene / olivine / feldspathic / OH-H2O) draped on the SFS mesh.",
+    "ohrc_polar_20211222":
+        "LEVEL 6 - OHRC polar, 4-instrument fusion: OHRC source + real NASA "
+        "NAC reference + TMC-2 metric heights (nearest fully-valid DTM "
+        "window ~2.9 km from center, labeled) + IIRS mineral classes - the "
+        "complete SIH26166 stack over one region.",
+}
+
 
 # ---------------------------------------------------------------- geography
 def scene_geo(meta):
@@ -299,7 +325,8 @@ def tmc2_metric_dem(product, force=False, center=None, extent_m=None):
                    "source": "TMC-2 DTM GeoTIFF (stereo-photogrammetric, "
                              "metric)",
                    "grid_n": int(g.shape[0]),
-                   "geographic_window": extra.get("geographic_window")}
+                   "geographic_window": extra.get("geographic_window"),
+                   "artifact_note": extra.get("artifact_note", "")}
     tif = os.path.join(TMC_CACHE, pid, "dtm.tif")
     if not os.path.exists(tif):
         ok = _extract_tif_for_product(pid, str(product.get("source", "")),
@@ -592,6 +619,40 @@ def _dem_to_grid(dem, cache_npy, pid, native_shape):
         # ringing / pixel terracing; sub-kilometre scale)
         g = cv2.GaussianBlur(g, (3, 3), 0)
         g[w < 1e-3] = 0.0
+    # honest artifact guard: DTM windows bordering a no-data region can
+    # contain a CLAMPED height plateau - many cells at exactly the raster
+    # max, zero variance, hugging the window border/corner.  That is a
+    # processing artifact (raster boundary), not terrain; detect it and
+    # inpaint from the surrounding valid surface (labeled, not silent).
+    artifact_note = ""
+    fin = np.isfinite(g)
+    if fin.any():
+        gmax = float(np.nanmax(g[fin]))
+        clamp = fin & (g >= gmax - 0.25)
+        if clamp.sum() > 0.01 * g.size:
+            # dilate so the ramp shoulder at the plateau edge goes too
+            clamp = cv2.dilate(clamp.astype(np.uint8),
+                               np.ones((7, 7), np.uint8)) > 0
+            g[clamp] = np.nan
+            for _ in range(400):
+                nanm = np.isnan(g)
+                if not nanm.any():
+                    break
+                gp = np.pad(g, 1, mode="edge")
+                with np.errstate(all="ignore"):
+                    neigh = np.nanmean(np.dstack(
+                        [gp[:-2, 1:-1], gp[2:, 1:-1],
+                         gp[1:-1, :-2], gp[1:-1, 2:]]), axis=2)
+                newly = nanm & np.isfinite(neigh)
+                if not newly.any():
+                    break
+                g[newly] = neigh[newly]
+            g = np.nan_to_num(g)
+            artifact_note = ("; %.1f%% of the window was a clamped height "
+                             "plateau at the no-data boundary (zero-variance "
+                             "raster-max artifact, not terrain) - inpainted "
+                             "from the surrounding valid surface"
+                             % (100.0 * float(clamp.mean())))
     g = g - float(g.min())
     # honest guard: a window with no valid data (or zero relief) must not
     # render as a fake metric surface
@@ -606,6 +667,7 @@ def _dem_to_grid(dem, cache_npy, pid, native_shape):
                                   "source": "TMC-2 DTM GeoTIFF "
                                             "(stereo-photogrammetric, "
                                             "metric heights in m)",
+                                  "artifact_note": artifact_note,
                                   "grid_n": GRID_N,
                                   "native_shape": list(map(int,
                                                            native_shape))}
@@ -740,6 +802,8 @@ def layers_payload(scene_dir, meta):
                                   "DEM covers this scene (measured "
                                   "accuracy map of the SFS relief)"},
         "legend_iirs": MINERAL_LEGEND,
+        "scene_brief": SCENE_BRIEFS.get(
+            os.path.basename(scene_dir.replace("\\", "/").rstrip("/")), ""),
     }
     # Prefer the scene's ALREADY-SELECTED cross-instrument references
     # (recorded at ingest time by the auto-selection in ingest.py) - a
@@ -773,7 +837,8 @@ def layers_payload(scene_dir, meta):
             "grid": (g.round(2).tolist() if g is not None else None),
             "center": center,
             "geographic_window": m.get("geographic_window"),
-            "note": (m.get("source", "") if g is not None
+            "note": ((m.get("source", "") +
+                      (m.get("artifact_note") or "")) if g is not None
                      else m.get("error", "")),
         }
     iirs_prod = _pick(iirs_mod.all_products(), "iirs_reference")

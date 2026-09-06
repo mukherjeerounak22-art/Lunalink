@@ -370,3 +370,6 @@ Frontend needs internet once (Three.js CDN via import map).
 - **First match on a scene is slow** → it's the fresh compute + LRO NAC
   auto-selection scan; results cache in memory and Redis afterwards.
 
+
+## 3-D Terrain layers (02 TERRAIN 3D)
+Each scene is a 192x192 mesh (1 m/px). Layer switcher: **HEIGHT - SFS** (photometric shape-from-shading, labeled approximation), **OPTICAL** (image drape), **METRIC - TMC-2** (measured stereo heights from the TMC-2 DTM, per-file Kaggle fetch), **MINERALS - IIRS** (256-band band-depth classification with legend), **SFS - METRIC** (measured validation error map, Pearson r + MAE). A per-scene brief above the buttons states exactly what the scene demonstrates and which layers are backed by real data. Full guide: PRESENTATION_GUIDE.md (# 3-D Terrain Layer Guide).

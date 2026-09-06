@@ -424,3 +424,38 @@ that difficulty is the research problem itself).
 
 
 
+
+
+## 3-D TERRAIN LAYER GUIDE (02 TERRAIN 3D) - what each scene shows
+
+Every scene renders as a 192x192 mesh over a 1 m/px analysis grid. The layer
+switcher above the mesh switches what is displayed; the blue line under the
+buttons states what THIS scene demonstrates and which layers are real.
+
+| Layer | What it is | Data source |
+|---|---|---|
+| HEIGHT - SFS | Shape-from-shading relief: linearized-Lambertian photometric inversion of the image under the mission's own sun angles. An APPROXIMATION (non-metric), stated on screen. | computed from the scene image |
+| OPTICAL | The raw radiance image draped over the SFS mesh. | scene image |
+| METRIC - TMC-2 | MEASURED stereo-photogrammetric heights (m) from the Chandrayaan-2 TMC-2 DTM product, co-registered to the scene's selenographic window. | TMC-2 DTM product (per-file Kaggle fetch) |
+| MINERALS - IIRS | Per-vertex mineral class from the IIRS 256-band cube: continuum-removed 1 um / 2 um / 3 um band depths -> pyroxene / olivine / feldspathic / mixed / OH-H2O, with on-screen legend. | IIRS cube (per-file Kaggle fetch) |
+| SFS - METRIC | The validation layer: per-vertex difference between the photometric reconstruction and the measured DEM, with Pearson r and normalized MAE. Turns the SFS disclaimer into a measured accuracy claim. | both of the above |
+
+Scene ladder (dropdown):
+1. Level 1 - CH-2 TMC demo product: baseline pipeline, SFS + optical.
+2. Level 2 - Tycho synthetic stand-in (labeled SYNTHETIC): controlled matcher validation.
+3. Level 3 - CH-2 OHRC equatorial: cross-mission OHRC vs NASA NAC matching (honest low % at different sun angles).
+4. Level 4 - TMC-2 metric DEM: SFS validated against measured heights (error map live).
+5. Level 5 - IIRS minerals: spectral classification draped on the mesh.
+6. Level 6 - OHRC polar, 4-instrument fusion: OHRC + real NASA NAC + TMC-2 metric + IIRS minerals over one region - the complete SIH26166 statement.
+
+Honest-data notes baked into the UI:
+- Level 6 METRIC uses the NEAREST fully-valid DTM window (~2.9 km from the scene
+  center) because the scene itself sits in a measured polar no-data gap of the
+  DTM; the offset is stated on the layer, never silent.
+- A clamped height plateau at the DTM no-data boundary (zero-variance cells at
+  the raster max - a processing artifact, not terrain) is detected and inpainted
+  from the surrounding valid surface; the layer note reports the fraction.
+- Crater lat/lon uses a local tangent-plane approximation from the label
+  footprint center (north-up assumption, lunar radius 1737.4 km, lon scale
+  x cos|lat|) - labeled in scene metadata; scenes without a footprint center
+  show pixel-space only.
