@@ -453,6 +453,11 @@ def _references_payload(scene_dir):
             meta = json.load(open(mp))
         except Exception:                                    # noqa: BLE001
             meta = {}
+    try:            # lazy TMC/IIRS thumbnails from committed caches
+        import ingest as _ing
+        _ing.ensure_reference_thumbnails(scene_dir, meta)
+    except Exception:                                        # noqa: BLE001
+        pass
     rel = os.path.relpath(scene_dir, PROC).replace("\\", "/")
     refs = []
     for key, label, fn in (("nasa", "NASA LRO NAC", "reference.png"),

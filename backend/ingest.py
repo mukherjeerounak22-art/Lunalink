@@ -153,6 +153,87 @@ def crop_center(geo, lab, r0, c0, crop_size):
         return (geo or {}).get("center")
 
 
+def ensure_reference_thumbnails(scene_dir, meta):
+    """Lazy reference thumbnails for scenes whose instrument windows were
+    built from Kaggle-side caches (e.g. the Level-6 polar scene): renders
+    the COMMITTED TMC-2 metric grid (true stereo heights, nearest-valid
+    window) and the IIRS mineral classification as reference images -
+    real instrument products, zero raster fetches, works on any host."""
+    meta = meta or {}
+    import layers as _layers
+    tmc_info = meta.get("tmc_reference") or {}
+    iirs_info = meta.get("iirs_reference") or {}
+    out_t = os.path.join(scene_dir, "reference_tmc.png")
+    out_i = os.path.join(scene_dir, "reference_iirs.png")
+    center = meta.get("source_footprint_center") or {}
+
+    if tmc_info.get("product_id") and not os.path.exists(out_t):
+        try:
+            pdir = os.path.join(_layers.TMC_CACHE, tmc_info["product_id"])
+            npy = os.path.join(pdir, "metric_dem_%s.npy"
+                               % _layers._cache_key(center))
+            if os.path.exists(npy):
+                g = np.load(npy).astype(np.float32)
+                lo, hi = np.nanpercentile(g, 2), np.nanpercentile(g, 98)
+                u8 = np.clip((g - lo) / max(hi - lo, 1e-6) * 255,
+                             0, 255).astype(np.uint8)
+                cv2.imwrite(out_t, cv2.resize(u8, (512, 512),
+                                              interpolation=cv2.INTER_CUBIC))
+        except Exception:                                    # noqa: BLE001
+            pass
+
+    if iirs_info.get("product_id") and not os.path.exists(out_i):
+        try:
+            pdir = os.path.join(_layers.IIRS_CACHE, iirs_info["product_id"])
+            npz = os.path.join(pdir, "minerals_%s.npz"
+                               % _layers._cache_key(center))
+            if os.path.exists(npz):
+                z = np.load(npz, allow_pickle=True)
+                key = next((k for k in ("cls", "classes", "minerals", "map")
+                            if k in z.files), z.files[0])
+                cls = np.asarray(z[key]).astype(np.int32)
+                pal = np.array([[int(c[i:i + 2], 16) for i in (1, 3, 5)]
+                                for c in (m["color"]
+                                          for m in _layers.MINERAL_LEGEND)],
+                               dtype=np.uint8)
+                rgb = pal[np.clip(cls, 0, len(pal) - 1)]
+                rgb = cv2.resize(rgb, (512, 512),
+                                 interpolation=cv2.INTER_NEAREST)
+                cv2.imwrite(out_i, cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+        except Exception:                                    # noqa: BLE001
+            pass
+
+
+def trim_reference_borders(path):
+    """Crop black/nodata margins off a saved reference image so the match
+    canvas shows real terrain (polar NAC crops are often mostly nodata).
+    Returns True when the file was rewritten."""
+    try:
+        g = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        if g is None:
+            return False
+        mask = g > 12                       # nodata frames are pure black
+        if mask.mean() > 0.5:
+            return False                    # already content-dense
+        ys, xs = np.where(mask)
+        if len(ys) < 400:
+            return False                    # too little content to show
+        h, w = g.shape
+        r0, r1 = int(ys.min()), int(ys.max()) + 1
+        c0, c1 = int(xs.min()), int(xs.max()) + 1
+        side = int(max(r1 - r0, c1 - c0) * 1.6) + 8
+        cy, cx = (r0 + r1) // 2, (c0 + c1) // 2
+        r0 = max(0, min(cy - side // 2, h - side)); r1 = min(h, r0 + side)
+        c0 = max(0, min(cx - side // 2, w - side)); c1 = min(w, c0 + side)
+        if r1 - r0 >= h and c1 - c0 >= w:
+            return False
+        im = cv2.imread(path)
+        cv2.imwrite(path, im[r0:r1, c0:c1])
+        return True
+    except Exception:                                        # noqa: BLE001
+        return False
+
+
 def auto_select_reference(img, max_candidates=None, min_ncc=0.35):
     """Nearest-matching reference selection from the LRO NAC reference
     library (data/reference/lro_nac): coarse NCC locates the scene inside

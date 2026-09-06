@@ -34,7 +34,7 @@
   "product_id": "ch2_iir_nci_20221227T0748212038_d_img_d32",
   "note": "IIRS footprint verified to cover the scene center (label-corner check)"
  },
- "multi_instrument_summary": "NASA LRO NAC reference auto-selected; ISRO cross-instrument: none.",
+ "multi_instrument_summary": "NASA LRO NAC reference auto-selected (RANSAC-verified polar strip); TMC-2 metric reference rendered from the committed stereo-DEM cache (nearest fully-valid window, ~2.9 km, labeled); IIRS mineral reference rendered from the committed 256-band classification of this scene.",
  "craters_detected": 25,
  "tmc_reference_ranked": [
   {
