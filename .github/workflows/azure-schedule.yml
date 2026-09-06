@@ -27,9 +27,15 @@ jobs:
           else
             echo "min=0" >> "$GITHUB_OUTPUT"
           fi
-      - uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDS }}
+      - name: az login (policy-proof, no marketplace action)
+        env:
+          AZURE_CREDS: ${{ secrets.AZURE_CREDS }}
+        run: |
+          az login --service-principal \
+            -u "$(echo "$AZURE_CREDS" | jq -r .clientId)" \
+            -p "$(echo "$AZURE_CREDS" | jq -r .clientSecret)" \
+            --tenant "$(echo "$AZURE_CREDS" | jq -r .tenantId)" >/dev/null
+          az account set --subscription "$(echo "$AZURE_CREDS" | jq -r .subscriptionId)"
       - name: apply min-replicas
         run: |
           az containerapp update -n sih26166-backend -g sih26166-rg \
